@@ -1,0 +1,8 @@
+#app-shell { min-height: 100vh; }
+.app-header { position: fixed; z-index: 20; top: 0; right: 0; left: 0; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0; background: #fff; border-bottom: 1px solid #e4e8f8; }
+.menu-button { width: 44px; height: 44px; border: 0; border-radius: 12px; color: #243481; background: transparent; font-size: 1.55rem; }.menu-button:hover { background: #edf0ff; }
+.header-title { overflow: hidden; margin: 0; color: #171d3a; font-size: 1rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; }.header-avatar { width: 36px; height: 36px; border: 2px solid #e5e9fb; border-radius: 50%; object-fit: cover; }
+#app { min-height: 100vh; padding-top: calc(64px + env(safe-area-inset-top)); }
+.install-card { position: fixed; z-index: 30; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); left: 16px; max-width: 520px; padding: 18px; }.install-card strong { display: block; }.install-card p { margin: 6px 0 14px; color: #59627e; line-height: 1.4; }.button-row { display: flex; gap: 10px; }
+.primary-button, .secondary-button { min-height: 46px; border-radius: 12px; padding: 0 18px; font-weight: 700; }.primary-button { border: 0; color: #fff; background: #3346a8; }.primary-button:hover { background: #27378f; }.primary-button:disabled { cursor: wait; opacity: .65; }.secondary-button { border: 1px solid #cbd2f1; color: #3346a8; background: #fff; }
+@media (min-width: 560px) { .install-card { left: 50%; transform: translateX(-50%); } }
