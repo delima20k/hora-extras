@@ -12,8 +12,9 @@ export class TotalView {
     const content = [
       element('p', { className: 'eyebrow', text: 'RelatÃ³rio financeiro' }),
       element('h2', { text: 'Horas e valores' }),
-      element('p', { className: 'screen-note', text: report.message || 'Acompanhe os valores recebidos e pendentes. Toque em um lanÃ§amento para informar o pagamento.' }),
+      element('p', { className: 'screen-note', text: report.message || (report.currentPeriod ? `Ciclo atual: ${report.currentPeriod.startDate.split('-').reverse().join('/')} a ${report.currentPeriod.endDate.split('-').reverse().join('/')}.` : 'Acompanhe os valores recebidos e pendentes.') }),
       this.createOverallCards(report),
+      this.createClosedPayrolls(report.closures || []),
       element('h3', { className: 'report-section-title', text: 'RelatÃ³rio por mÃªs' }),
       months.length ? element('div', { className: 'monthly-report-list' }, months.map((month) => this.createMonth(month, handlers))) : element('section', { className: 'empty-state' }, [element('h3', { text: 'Nenhuma hora extra cadastrada.' }), element('p', { text: 'Os lanÃ§amentos salvos aparecerÃ£o aqui, separados por mÃªs.' })])
     ];
@@ -28,6 +29,17 @@ export class TotalView {
   }
   createCard(title, summary = {}, variant) {
     return element('article', { className: `report-card ${variant}` }, [element('span', { text: title }), element('strong', { text: formatCurrency(summary.totalPay) }), element('small', { text: `${duration(summary.minutes65)} a 65% Â· ${duration(summary.minutes100)} a 100%` })]);
+  }
+  createClosedPayrolls(closures) {
+    if (!closures.length) return null;
+    return element('section', { className: 'closed-payrolls' }, [
+      element('h3', { className: 'report-section-title', text: 'Folhas fechadas' }),
+      element('div', { className: 'closed-payroll-list' }, closures.map((closure) => element('article', { className: 'closed-payroll-card' }, [
+        element('span', { text: `${closure.startDate.split('-').reverse().join('/')} a ${closure.endDate.split('-').reverse().join('/')}` }),
+        element('strong', { text: formatCurrency(closure.totalPay) }),
+        element('small', { text: `65%: ${duration(closure.minutes65)} (${formatCurrency(closure.value65)}) · 100%: ${duration(closure.minutes100)} (${formatCurrency(closure.value100)})` })
+      ])))
+    ]);
   }
   createMonth(month, handlers) {
     const [year, value] = month.key.split('-').map(Number);
@@ -46,7 +58,7 @@ export class TotalView {
     return element('div', { className: 'payment-entry' }, [
       element('span', { text: `${entry.date.split('-').reverse().join('/')} Â· ${entry.startTime} â†’ ${entry.endTime}` }),
       element('strong', { text: formatCurrency(entry.pay || 0) }),
-      button(isReceived ? 'Marcar pendente' : 'Marcar recebido', { className: isReceived ? 'secondary-button compact-button' : 'primary-button compact-button', onClick: () => handlers.onPaymentChange?.(entry, isReceived ? 'pending' : 'received') })
+      entry.isClosed ? element('small', { className: 'closed-entry-note', text: 'Folha fechada' }) : button(isReceived ? 'Marcar pendente' : 'Marcar recebido', { className: isReceived ? 'secondary-button compact-button' : 'primary-button compact-button', onClick: () => handlers.onPaymentChange?.(entry, isReceived ? 'pending' : 'received') })
     ]);
   }
   renderMessage(message) { const note = this.container.querySelector('.screen-note'); if (note) note.textContent = message; }

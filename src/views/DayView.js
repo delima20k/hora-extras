@@ -12,7 +12,7 @@ export class DayView {
   render(model, handlers) {
     const fullDate = formatSelectedDate(model.date); const [weekday, ...dateParts] = fullDate.split(',');
     const schedule = model.workSchedule ? `${model.workSchedule.startTime} às ${model.workSchedule.endTime}` : null;
-    const entries = model.entries.length ? element('div', { className: 'entry-list' }, model.entries.map((entry) => this.createEntry(entry, handlers))) : element('section', { className: 'empty-state' }, [element('h3', { text: 'Nenhuma hora extra cadastrada.' }), element('p', { text: 'Selecione um dia e informe apenas os horários fora da jornada normal.' })]);
+    const entries = model.entries.length ? element('div', { className: 'entry-list' }, model.entries.map((entry) => this.createEntry(entry, handlers, model.isClosed))) : element('section', { className: 'empty-state' }, [element('h3', { text: 'Nenhuma hora extra cadastrada.' }), element('p', { text: 'Selecione um dia e informe apenas os horários fora da jornada normal.' })]);
     const totals = element('section', { className: 'overtime-summary' }, [
       element('strong', { text: `Total do dia: ${model.totalDuration}` }),
       element('span', { text: `65%: ${this.formatDuration(model.minutes65)} · 100%: ${this.formatDuration(model.minutes100)}` }),
@@ -24,18 +24,19 @@ export class DayView {
       element('p', { className: 'eyebrow', text: weekday.replace(/^./, (char) => char.toUpperCase()) }),
       element('h2', { text: dateParts.join(',').trim().replace(/^./, (char) => char.toUpperCase()) }),
       element('section', { className: 'work-schedule-card' }, [element('strong', { text: 'Horário normal de trabalho' }), element('p', { text: schedule || 'Cadastre seu horário normal no perfil para validar as horas extras.' })]),
+      model.isClosed ? element('section', { className: 'payroll-closed-message', role: 'status' }, [element('strong', { text: 'Folha fechada' }), element('p', { text: model.closedMessage })]) : null,
       model.showMonthSummary ? this.createMonthSummary(model) : null,
       model.message ? element('p', { className: 'day-message', role: 'status', 'aria-live': 'polite', text: model.message }) : null,
       entries, totals
     ];
-    if (model.formOpen) content.push(this.createForm(model.editingEntry, handlers)); else content.push(button('Adicionar hora extra', { className: 'primary-button add-entry-button', onClick: handlers.onAdd }));
+    if (!model.isClosed && model.formOpen) content.push(this.createForm(model.editingEntry, handlers)); else if (!model.isClosed) content.push(button('Adicionar hora extra', { className: 'primary-button add-entry-button', onClick: handlers.onAdd }));
     if (model.showMonthSummary) content.push(this.createHourlyRatesFooter(model, handlers));
     this.container.replaceChildren(element('section', { className: 'screen day-screen' }, content));
   }
   createMonthSummary(model) {
     const totals = model.monthlyTotals || {}; const hidden = model.valuesVisible ? '' : ' is-hidden';
     return element('section', { className: 'month-overtime-summary' }, [
-      element('strong', { text: 'Total de horas extras no mes' }),
+      element('strong', { text: 'Total de horas extras no ciclo atual' }),
       element('div', { className: `sensitive-value${hidden}` }, [
         element('span', { text: `65%: ${this.formatDuration(totals.minutes65)} · ${formatCurrency(totals.value65)}` }),
         element('span', { text: `100%: ${this.formatDuration(totals.minutes100)} · ${formatCurrency(totals.value100)}` }),
@@ -67,17 +68,35 @@ export class DayView {
       element('div', { className: 'past-day-picker' }, [button('Dia anterior', { className: 'secondary-button compact-button', onClick: () => handlers.onSelectDate(toDateKey(previous)) }), field('Outro dia anterior', input)])
     ]);
   }
-  createEntry(entry, handlers) {
+  createEntry(entry, handlers, isClosed = false) {
     const details = [element('strong', { text: `${entry.startTime} → ${entry.endTime}` }), element('span', { className: 'entry-duration', text: `Duração: ${entry.displayDuration}` }), element('span', { className: 'entry-rate', text: `Adicional: ${Math.round((entry.multiplier - 1) * 100)}% · ${formatCurrency(entry.pay)}` })];
     if (entry.endsNextDay) details.push(element('span', { className: 'entry-next-day', text: 'Termina no dia seguinte' }));
     if (entry.notes) details.push(element('p', { className: 'entry-notes', text: entry.notes }));
-    return element('article', { className: 'overtime-entry' }, [element('div', { className: 'entry-details' }, details), element('div', { className: 'entry-actions' }, [button('Editar', { className: 'secondary-button', onClick: () => handlers.onEdit(entry) }), button('Excluir', { className: 'danger-button', onClick: () => handlers.onDelete(entry) })])]);
+    return element('article', { className: 'overtime-entry' }, [element('div', { className: 'entry-details' }, details), isClosed ? element('span', { className: 'entry-closed', text: 'Fechado' }) : element('div', { className: 'entry-actions' }, [button('Editar', { className: 'secondary-button', onClick: () => handlers.onEdit(entry) }), button('Excluir', { className: 'danger-button', onClick: () => handlers.onDelete(entry) })])]);
   }
   createForm(entry, handlers) {
-    const form = element('form', { className: 'entry-form', novalidate: '' }); const startTime = element('input', { id: 'overtime-start', type: 'time', value: entry?.startTime || '', required: '', 'aria-describedby': 'duration-preview schedule-warning' }); const endTime = element('input', { id: 'overtime-end', type: 'time', value: entry?.endTime || '', required: '', 'aria-describedby': 'duration-preview schedule-warning' }); const notes = element('textarea', { id: 'overtime-notes', rows: '3', maxlength: '300' }); const preview = element('p', { id: 'duration-preview', className: 'duration-preview', role: 'status', 'aria-live': 'polite' }); const warning = element('p', { id: 'schedule-warning', className: 'schedule-warning', role: 'status', 'aria-live': 'polite' });
+    const form = element('form', { className: 'entry-form', novalidate: '' }); const startTime = this.createTimeControl('overtime-start', entry?.startTime || '', 'duration-preview schedule-warning'); const endTime = this.createTimeControl('overtime-end', entry?.endTime || '', 'duration-preview schedule-warning'); const notes = element('textarea', { id: 'overtime-notes', rows: '3', maxlength: '300' }); const preview = element('p', { id: 'duration-preview', className: 'duration-preview', role: 'status', 'aria-live': 'polite' }); const warning = element('p', { id: 'schedule-warning', className: 'schedule-warning', role: 'status', 'aria-live': 'polite' });
     notes.value = entry?.notes || ''; const updatePreview = () => handlers.onTimeChange(startTime.value, endTime.value); startTime.addEventListener('input', updatePreview); endTime.addEventListener('input', updatePreview); this.durationPreview = preview; this.scheduleWarning = warning; this.startTime = startTime; this.endTime = endTime;
     form.append(element('h3', { text: entry ? 'Editar hora extra' : 'Adicionar hora extra' }), element('div', { className: 'form-grid' }, [field('Hora inicial', startTime), field('Hora final', endTime)]), preview, warning, field('Observação (opcional)', notes, 'Máximo de 300 caracteres.'), element('div', { className: 'button-row' }, [button('Cancelar', { className: 'secondary-button', onClick: handlers.onCancel }), button('Salvar lançamento', { className: 'primary-button', type: 'submit' })]));
     form.addEventListener('submit', (event) => { event.preventDefault(); handlers.onSave({ startTime: startTime.value, endTime: endTime.value, notes: notes.value }); }); return form;
+  }
+  createTimeControl(id, value, describedBy) {
+    const control = element('input', { id, className: 'time-control', type: 'text', value, placeholder: 'HH:mm', readonly: '', required: '', 'aria-haspopup': 'dialog', 'aria-describedby': describedBy });
+    const open = () => this.openTimePicker(control);
+    control.addEventListener('click', open);
+    control.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+    return control;
+  }
+  openTimePicker(control) {
+    const [initialHour = '00', initialMinute = '00'] = /^\d{2}:\d{2}$/.test(control.value) ? control.value.split(':') : [];
+    const dialog = element('dialog', { className: 'time-picker-dialog', 'aria-label': 'Definir horário' });
+    const hour = element('select', { className: 'time-picker-select', 'aria-label': 'Hora' }, Array.from({ length: 24 }, (_, value) => { const text = String(value).padStart(2, '0'); const option = element('option', { value: text, text }); if (text === initialHour) option.selected = true; return option; }));
+    const minute = element('select', { className: 'time-picker-select', 'aria-label': 'Minuto' }, Array.from({ length: 60 }, (_, value) => { const text = String(value).padStart(2, '0'); const option = element('option', { value: text, text }); if (text === initialMinute) option.selected = true; return option; }));
+    const close = () => dialog.close();
+    const clear = () => { control.value = ''; control.dispatchEvent(new Event('input', { bubbles: true })); close(); };
+    const define = () => { control.value = `${hour.value}:${minute.value}`; control.dispatchEvent(new Event('input', { bubbles: true })); close(); };
+    dialog.append(element('div', { className: 'time-picker-content' }, [element('span', { className: 'time-picker-icon', text: '🕒' }), element('h3', { text: 'Definir horário' }), element('div', { className: 'time-picker-values' }, [hour, element('strong', { text: ':' }), minute]), element('div', { className: 'time-picker-actions' }, [button('Limpar', { className: 'secondary-button compact-button', onClick: clear }), button('Cancelar', { className: 'secondary-button compact-button', onClick: close }), button('Definir', { className: 'primary-button compact-button', onClick: define })]) ]));
+    dialog.addEventListener('close', () => dialog.remove()); document.body.append(dialog); dialog.showModal();
   }
   formatDuration(minutes = 0) { return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`; }
   updateDurationPreview({ text, isError, warning = '' }) { if (!this.durationPreview) return; this.durationPreview.textContent = text; this.durationPreview.classList.toggle('is-error', isError); this.startTime?.setAttribute('aria-invalid', String(isError)); this.endTime?.setAttribute('aria-invalid', String(isError)); if (this.scheduleWarning) this.scheduleWarning.textContent = warning; }

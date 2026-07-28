@@ -5,20 +5,25 @@ import { assertDateKey } from '../utils/validators.js';
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export class DayController {
-  constructor({ state, dateService, entryRepository, timeCalculationService = new TimeCalculationService(), onEntriesChanged = () => {} }) {
-    this.state = state; this.dateService = dateService; this.entryRepository = entryRepository; this.timeCalculationService = timeCalculationService; this.onEntriesChanged = onEntriesChanged;
-    this.view = null; this.entries = []; this.monthEntries = []; this.formOpen = false; this.editingEntry = null; this.message = ''; this.requestId = 0; this.valuesVisible = false;
+  constructor({ state, dateService, entryRepository, closureRepository, payrollPeriodService, payrollClosureService, timeCalculationService = new TimeCalculationService(), onEntriesChanged = () => {} }) {
+    this.state = state; this.dateService = dateService; this.entryRepository = entryRepository; this.closureRepository = closureRepository; this.payrollPeriodService = payrollPeriodService; this.payrollClosureService = payrollClosureService; this.timeCalculationService = timeCalculationService; this.onEntriesChanged = onEntriesChanged;
+    this.view = null; this.entries = []; this.monthEntries = []; this.cycleEntries = []; this.formOpen = false; this.editingEntry = null; this.message = ''; this.requestId = 0; this.valuesVisible = false; this.isClosed = false; this.closedPeriod = null;
   }
   get date() { return assertDateKey(this.state.selectedDate); }
+  get now() { return this.dateService.now?.() || new Date(); }
   get employeeId() { if (!this.state.employee?.id) throw new Error('Cadastre o perfil antes de registrar horas extras.'); return this.state.employee.id; }
   async open(view, onBack, { alwaysShowForm = false } = {}) { const requestId = ++this.requestId; this.view = view; this.onBack = onBack; this.alwaysShowForm = alwaysShowForm; this.formOpen = this.formOpen || alwaysShowForm; this.view.renderLoading(); await this.refresh(requestId); }
   close() { this.requestId += 1; this.view = null; this.formOpen = false; this.editingEntry = null; this.alwaysShowForm = false; }
   async refresh(requestId = this.requestId) {
     try {
       const [year, month] = this.date.split('-').map(Number);
-      const [entries, monthEntries] = await Promise.all([this.entryRepository.findByDate(this.employeeId, this.date), this.entryRepository.findByMonth(this.employeeId, month, year)]);
-      if (requestId !== this.requestId) return; this.entries = entries; this.monthEntries = monthEntries; this.message = '';
-    } catch (error) { if (requestId !== this.requestId) return; this.entries = []; this.monthEntries = []; this.message = error.message; }
+      const [entries, monthEntries, allEntries] = await Promise.all([this.entryRepository.findByDate(this.employeeId, this.date), this.entryRepository.findByMonth(this.employeeId, month, year), this.entryRepository.findAll(this.employeeId)]);
+      const currentPeriod = this.payrollPeriodService?.getCurrentPeriod(this.state.payrollSettings, this.now);
+      if (this.closureRepository && this.payrollClosureService) await this.payrollClosureService.sync({ employeeId: this.employeeId, entries: allEntries, payrollSettings: this.state.payrollSettings, closureRepository: this.closureRepository, now: this.now });
+      if (requestId !== this.requestId) return;
+      this.entries = entries; this.monthEntries = monthEntries; this.cycleEntries = currentPeriod ? allEntries.filter((entry) => this.payrollPeriodService.getPeriodForDate(entry.date, this.state.payrollSettings)?.endDate === currentPeriod.endDate) : monthEntries;
+      this.isClosed = this.payrollPeriodService?.isClosed(this.date, this.state.payrollSettings, this.now) || false; this.closedPeriod = this.isClosed ? this.payrollPeriodService.getPeriodForDate(this.date, this.state.payrollSettings) : null; this.message = '';
+    } catch (error) { if (requestId !== this.requestId) return; this.entries = []; this.monthEntries = []; this.cycleEntries = []; this.isClosed = false; this.closedPeriod = null; this.message = error.message; }
     if (requestId === this.requestId) this.render();
   }
   render() {
@@ -28,12 +33,12 @@ export class DayController {
       return { ...entry, displayDuration: this.timeCalculationService.formatDuration(entry.durationMinutes), endsNextDay: this.timeCalculationService.isNextDay(entry.startTime, entry.endTime), multiplier, pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings) };
     });
     const totals = this.calculateTotals(entries);
-    const monthlyEntries = this.monthEntries.map((entry) => ({ ...entry, multiplier: this.timeCalculationService.getOvertimeMultiplier(entry.date), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings) }));
+    const monthlyEntries = this.cycleEntries.map((entry) => ({ ...entry, multiplier: this.timeCalculationService.getOvertimeMultiplier(entry.date), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings) }));
     const monthlyTotals = this.calculateTotals(monthlyEntries);
     const salary = Number(this.state.payrollSettings?.salary) || 0;
     const monthlyWorkload = Number(this.state.payrollSettings?.monthlyWorkload) || 0;
     const normalRate = salary > 0 && monthlyWorkload > 0 ? salary / monthlyWorkload : 0;
-    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totals.totalMinutes), formOpen: this.formOpen, editingEntry: this.editingEntry, message: this.message, showMonthSummary: this.alwaysShowForm, monthlyTotals, hourlyRates: { normal: normalRate, extra65: normalRate * 1.65, extra100: normalRate * 2 }, valuesVisible: this.valuesVisible, employee: this.state.employee, salary, ...totals }, {
+    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totals.totalMinutes), formOpen: this.formOpen && !this.isClosed, editingEntry: this.editingEntry, message: this.message, showMonthSummary: this.alwaysShowForm, monthlyTotals, hourlyRates: { normal: normalRate, extra65: normalRate * 1.65, extra100: normalRate * 2 }, valuesVisible: this.valuesVisible, employee: this.state.employee, salary, isClosed: this.isClosed, closedMessage: this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}. Este dia nÃ£o aceita novos lanÃ§amentos.` : '', ...totals }, {
       onBack: this.onBack, onAdd: () => this.openCreateForm(), onEdit: (entry) => this.openEditForm(entry), onCancel: () => this.closeForm(), onSave: (data) => this.save(data), onDelete: (entry) => this.delete(entry), onTimeChange: (startTime, endTime) => this.updateDurationPreview(startTime, endTime), onSelectDate: (date) => this.selectDate(date), onToggleValues: () => this.toggleValues()
     });
   }
@@ -44,17 +49,19 @@ export class DayController {
       result.pay += entry.pay; return result;
     }, { minutes65: 0, minutes100: 0, pay: 0, totalMinutes: totalDurationMinutes, value65: 0, value100: 0 });
   }
-  openCreateForm() { try { this.employeeId; this.formOpen = true; this.editingEntry = null; this.message = ''; } catch (error) { this.message = error.message; } this.render(); }
-  openEditForm(entry) { this.formOpen = true; this.editingEntry = entry; this.message = ''; this.render(); }
+  openCreateForm() { try { this.ensureOpenPeriod(); this.employeeId; this.formOpen = true; this.editingEntry = null; this.message = ''; } catch (error) { this.message = error.message; } this.render(); }
+  openEditForm(entry) { try { this.ensureOpenPeriod(); this.formOpen = true; this.editingEntry = entry; this.message = ''; } catch (error) { this.message = error.message; } this.render(); }
   closeForm() { this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.message = ''; this.render(); }
   selectDate(date) {
     try { this.state.selectedDate = assertDateKey(date); const [year, month] = date.split('-').map(Number); this.state.selectedYear = year; this.state.selectedMonth = month; this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.refresh(); }
     catch (error) { this.message = error.message; this.render(); }
   }
   toggleValues() { this.valuesVisible = !this.valuesVisible; this.render(); }
+  ensureOpenPeriod() { if (this.isClosed) throw new Error(this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha jÃ¡ foi fechada.'); }
   updateDurationPreview(startTime, endTime) {
     if (!startTime || !endTime) return this.view?.updateDurationPreview({ text: '', isError: false });
     try {
+      this.ensureOpenPeriod();
       const duration = this.timeCalculationService.calculateDuration(startTime, endTime);
       if (this.timeCalculationService.overlapsNormalSchedule(startTime, endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
       const multiplier = this.timeCalculationService.getOvertimeMultiplier(this.date);
@@ -78,6 +85,7 @@ export class DayController {
     } catch (error) { this.message = error.message || 'Não foi possível salvar a hora extra.'; this.render(); }
   }
   async delete(entry) {
+    if (this.isClosed) { this.message = this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha jÃ¡ foi fechada.'; this.render(); return; }
     if (!window.confirm('Deseja realmente excluir este lançamento?')) return;
     try { await this.entryRepository.delete(entry); this.entries = await this.entryRepository.findByDate(this.employeeId, this.date); this.message = 'Lançamento excluído.'; this.onEntriesChanged({ date: this.date }); this.render(); }
     catch (error) { this.message = error.message || 'Não foi possível excluir o lançamento.'; this.render(); }

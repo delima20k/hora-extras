@@ -8,10 +8,13 @@ import { PayrollSettingsRepository } from '../repositories/PayrollSettingsReposi
 import { ProfileRepository } from '../repositories/ProfileRepository.js';
 import { WorkScheduleRepository } from '../repositories/WorkScheduleRepository.js';
 import { OvertimeEntryRepository } from '../repositories/OvertimeEntryRepository.js';
+import { PayrollClosureRepository } from '../repositories/PayrollClosureRepository.js';
 import { DatabaseService } from '../services/DatabaseService.js';
 import { DateService } from '../services/DateService.js';
 import { CalendarService } from '../services/CalendarService.js';
 import { TimeCalculationService } from '../services/TimeCalculationService.js';
+import { PayrollPeriodService } from '../services/PayrollPeriodService.js';
+import { PayrollClosureService } from '../services/PayrollClosureService.js';
 import { ImageService } from '../services/ImageService.js';
 import { PwaService } from '../services/PwaService.js';
 import { StorageService } from '../services/StorageService.js';
@@ -48,7 +51,8 @@ export class App {
         workSchedule: new WorkScheduleRepository(this.database),
         payroll: new PayrollSettingsRepository(this.database),
         profile: new ProfileRepository(this.database),
-        overtimeEntry: new OvertimeEntryRepository(this.database)
+        overtimeEntry: new OvertimeEntryRepository(this.database),
+        payrollClosure: new PayrollClosureRepository(this.database)
       };
       const loaded = await this.repositories.profile.loadPrimary();
       if (loaded) Object.assign(this.state, loaded);
@@ -73,12 +77,16 @@ export class App {
         calendarService: new CalendarService(() => this.dateService.now()),
         onDaySelected: () => this.navigation.navigate('day')
       });
-      this.totalController = new TotalController({ state: this.state, entryRepository: this.repositories.overtimeEntry, timeCalculationService: new TimeCalculationService() });
+      const timeCalculationService = new TimeCalculationService(); const payrollPeriodService = new PayrollPeriodService(); const payrollClosureService = new PayrollClosureService({ payrollPeriodService, timeCalculationService });
+      this.totalController = new TotalController({ state: this.state, entryRepository: this.repositories.overtimeEntry, closureRepository: this.repositories.payrollClosure, timeCalculationService, payrollPeriodService, payrollClosureService, dateService: this.dateService });
       this.dayController = new DayController({
         state: this.state,
         dateService: this.dateService,
         entryRepository: this.repositories.overtimeEntry,
-        timeCalculationService: new TimeCalculationService(),
+        timeCalculationService,
+        closureRepository: this.repositories.payrollClosure,
+        payrollPeriodService,
+        payrollClosureService,
         onEntriesChanged: () => {
           if (this.state.currentRoute === 'month') this.calendarController.render();
           if (this.state.currentRoute === 'total') void this.totalController.refresh();
