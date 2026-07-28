@@ -32,7 +32,7 @@ jobs:
       - name: Run tests
         run: npm test -- --testTimeout=5000
       - name: Build application
-        run: npm run build
+        run: npx vite build --mode github
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
