@@ -63,7 +63,7 @@ export class DayController {
     try {
       this.ensureOpenPeriod();
       const duration = this.timeCalculationService.calculateDuration(startTime, endTime);
-      if (this.timeCalculationService.overlapsNormalSchedule(startTime, endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
+      if (this.timeCalculationService.isNormalWorkday(this.date, this.state.workSchedule) && this.timeCalculationService.overlapsNormalSchedule(startTime, endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
       const multiplier = this.timeCalculationService.getOvertimeMultiplier(this.date);
       const pay = this.timeCalculationService.calculateOvertimePay(duration, this.date, this.state.payrollSettings);
       this.view?.updateDurationPreview({ text: `Duração: ${this.timeCalculationService.formatDuration(duration)} · adicional de ${Math.round((multiplier - 1) * 100)}% · ${currency.format(pay)}.`, isError: false });
@@ -77,7 +77,7 @@ export class DayController {
   async save(data) {
     try {
       this.timeCalculationService.calculateDuration(data.startTime, data.endTime);
-      if (this.timeCalculationService.overlapsNormalSchedule(data.startTime, data.endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
+      if (this.timeCalculationService.isNormalWorkday(this.date, this.state.workSchedule) && this.timeCalculationService.overlapsNormalSchedule(data.startTime, data.endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
       const entry = this.editingEntry ? new OvertimeEntry(this.editingEntry, this.timeCalculationService).update(data, this.timeCalculationService) : new OvertimeEntry({ employeeId: this.employeeId, date: this.date, ...data }, this.timeCalculationService);
       if (this.timeCalculationService.hasOverlap(entry, await this.getEntriesForOverlap(), this.editingEntry?.id)) throw new Error('Este horário se sobrepõe a outro lançamento do mesmo dia.');
       if (this.editingEntry) await this.entryRepository.update(entry); else await this.entryRepository.create(entry);

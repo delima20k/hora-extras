@@ -12,9 +12,17 @@ describe('TimeCalculationService', () => {
   it('calcula adicional de 65% em dias úteis e 100% em domingos e feriados', () => {
     expect(service.getOvertimeMultiplier('2026-07-27')).toBe(1.65);
     expect(service.getOvertimeMultiplier('2026-07-26')).toBe(2);
+    expect(service.getOvertimeMultiplier('2026-07-09')).toBe(2);
+    expect(service.getOvertimeMultiplier('2027-01-25')).toBe(1.65);
+    expect(service.getOvertimeMultiplier('2026-02-19')).toBe(2);
+    expect(service.getOvertimeMultiplier('2026-06-13')).toBe(2);
     expect(service.getOvertimeMultiplier('2026-12-25')).toBe(2);
     expect(service.calculateOvertimePay(60, '2026-07-27', { salary: 2200, monthlyWorkload: 220 })).toBe(16.5);
     expect(service.overlapsNormalSchedule('14:20', '18:00', { startTime: '06:00', endTime: '14:20' })).toBe(false);
     expect(service.overlapsNormalSchedule('13:00', '15:00', { startTime: '06:00', endTime: '14:20' })).toBe(true);
+    const schedule = { workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '06:00', endTime: '14:20' };
+    expect(service.isNormalWorkday('2026-07-27', schedule)).toBe(true);
+    expect(service.isNormalWorkday('2026-07-25', schedule)).toBe(false);
+    expect(service.isNormalWorkday('2026-12-25', schedule)).toBe(false);
   });
 });

@@ -34,7 +34,9 @@ export class TimeCalculationService {
   }
   isHoliday(date) {
     const { year, month, day, value } = this.getDateParts(date);
-    const fixed = new Set(['1-1', '4-21', '5-1', '9-7', '10-12', '11-2', '11-15', '11-20', '12-25']);
+    const fixed = new Set([
+      '1-1', '2-19', '4-21', '5-1', '6-13', '7-9', '9-7', '10-12', '11-2', '11-15', '11-20', '12-25'
+    ]);
     if (fixed.has(`${month}-${day}`)) return true;
     const easter = this.getEasterDate(year);
     const diff = Math.round((value - easter) / 86400000);
@@ -48,6 +50,12 @@ export class TimeCalculationService {
     const salary = Number(payrollSettings?.salary); const monthlyWorkload = Number(payrollSettings?.monthlyWorkload);
     if (!Number.isFinite(salary) || salary <= 0 || !Number.isFinite(monthlyWorkload) || monthlyWorkload <= 0) return 0;
     return (durationMinutes / 60) * (salary / monthlyWorkload) * this.getOvertimeMultiplier(date);
+  }
+  isNormalWorkday(date, schedule) {
+    if (!schedule?.workDays?.length || this.isHoliday(date)) return false;
+    const { value } = this.getDateParts(date);
+    const names = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return schedule.workDays.includes(names[value.getDay()]);
   }
   overlapsNormalSchedule(startTime, endTime, schedule) {
     if (!schedule?.startTime || !schedule?.endTime) return false;
