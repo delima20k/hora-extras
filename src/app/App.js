@@ -69,6 +69,7 @@ export class App {
           this.updateAvatarUrl();
           this.refreshChrome();
           if (this.state.currentRoute === 'total') await this.totalController.refresh();
+          this.navigation?.navigate('today');
         }
       });
       this.calendarController = new CalendarController({
