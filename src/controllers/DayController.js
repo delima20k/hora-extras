@@ -11,8 +11,8 @@ export class DayController {
   }
   get date() { return assertDateKey(this.state.selectedDate); }
   get employeeId() { if (!this.state.employee?.id) throw new Error('Cadastre o perfil antes de registrar horas extras.'); return this.state.employee.id; }
-  async open(view, onBack) { const requestId = ++this.requestId; this.view = view; this.onBack = onBack; this.view.renderLoading(); await this.refresh(requestId); }
-  close() { this.requestId += 1; this.view = null; this.formOpen = false; this.editingEntry = null; }
+  async open(view, onBack, { alwaysShowForm = false } = {}) { const requestId = ++this.requestId; this.view = view; this.onBack = onBack; this.alwaysShowForm = alwaysShowForm; this.formOpen = this.formOpen || alwaysShowForm; this.view.renderLoading(); await this.refresh(requestId); }
+  close() { this.requestId += 1; this.view = null; this.formOpen = false; this.editingEntry = null; this.alwaysShowForm = false; }
   async refresh(requestId = this.requestId) {
     try { const entries = await this.entryRepository.findByDate(this.employeeId, this.date); if (requestId !== this.requestId) return; this.entries = entries; this.message = ''; }
     catch (error) { if (requestId !== this.requestId) return; this.entries = []; this.message = error.message; }
@@ -35,7 +35,7 @@ export class DayController {
   }
   openCreateForm() { try { this.employeeId; this.formOpen = true; this.editingEntry = null; this.message = ''; } catch (error) { this.message = error.message; } this.render(); }
   openEditForm(entry) { this.formOpen = true; this.editingEntry = entry; this.message = ''; this.render(); }
-  closeForm() { this.formOpen = false; this.editingEntry = null; this.message = ''; this.render(); }
+  closeForm() { this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.message = ''; this.render(); }
   selectDate(date) {
     try { this.state.selectedDate = assertDateKey(date); const [year, month] = date.split('-').map(Number); this.state.selectedYear = year; this.state.selectedMonth = month; this.formOpen = false; this.editingEntry = null; this.refresh(); }
     catch (error) { this.message = error.message; this.render(); }
@@ -62,7 +62,7 @@ export class DayController {
       const entry = this.editingEntry ? new OvertimeEntry(this.editingEntry, this.timeCalculationService).update(data, this.timeCalculationService) : new OvertimeEntry({ employeeId: this.employeeId, date: this.date, ...data }, this.timeCalculationService);
       if (this.timeCalculationService.hasOverlap(entry, await this.getEntriesForOverlap(), this.editingEntry?.id)) throw new Error('Este horário se sobrepõe a outro lançamento do mesmo dia.');
       if (this.editingEntry) await this.entryRepository.update(entry); else await this.entryRepository.create(entry);
-      const wasEditing = Boolean(this.editingEntry); this.formOpen = false; this.editingEntry = null; this.entries = await this.entryRepository.findByDate(this.employeeId, this.date); this.message = wasEditing ? 'Lançamento atualizado com sucesso.' : 'Hora extra salva com sucesso.'; this.onEntriesChanged({ date: this.date }); this.render();
+      const wasEditing = Boolean(this.editingEntry); this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.entries = await this.entryRepository.findByDate(this.employeeId, this.date); this.message = wasEditing ? 'Lançamento atualizado com sucesso.' : 'Hora extra salva com sucesso no aparelho.'; this.onEntriesChanged({ date: this.date }); this.render();
     } catch (error) { this.message = error.message || 'Não foi possível salvar a hora extra.'; this.render(); }
   }
   async delete(entry) {

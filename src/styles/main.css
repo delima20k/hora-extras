@@ -47,9 +47,3 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 359px) { .screen { padding-right: 16px; padding-left: 16px; } .summary-list dt, .summary-list dd { padding: 13px 10px; font-size: .92rem; } }
 @media (min-width: 768px) { .screen { max-width: 760px; padding-top: 36px; } .app-header { padding-right: 24px; padding-left: 24px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
-
-@media (prefers-color-scheme: dark) {
-  :root { --black: #fff5ea; --beige: #17110d; --cream: #241a14; --gray: #e1c8b2; --gray-light: #5a4638; --orange: #df7135; --orange-dark: #ffb077; --yellow: #f2bc3d; --shadow: none; }
-  .form-field input, .form-field select, .form-field textarea { border-color: #745a46; color: var(--black); background: #1b130e; }
-  .calendar-day.is-outside-month { color: #c3aa94; }
-}

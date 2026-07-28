@@ -1,20 +1,53 @@
-import { element } from '../utils/dom.js';
+import { button, element } from '../utils/dom.js';
 import { formatCurrency, formatMonthYear } from '../utils/formatters.js';
 
+const duration = (minutes = 0) => `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
+
 export class TotalView {
-  renderLoading(container) { container.replaceChildren(element('section', { className: 'screen' }, [element('p', { text: 'Carregando totais...' })])); }
-  render(container, state, summary = {}) {
-    const totalMinutes = Math.max(0, Number(summary.totalMinutes) || 0);
-    const rows = [
-      ['Período', formatMonthYear(state.selectedMonth, state.selectedYear)],
-      ['Dias com hora extra', String(summary.daysWithOvertime || 0)],
-      ['Horas extras a 65%', this.formatDuration(summary.minutes65)],
-      ['Horas extras a 100%', this.formatDuration(summary.minutes100)],
-      ['Total de horas extras', this.formatDuration(totalMinutes)],
-      ['Total a receber', formatCurrency(summary.totalPay || 0)]
+  constructor(container) { this.container = container; }
+  renderLoading(container = this.container) { container.replaceChildren(element('section', { className: 'screen' }, [element('p', { text: 'Carregando relatÃ³rio...' })])); }
+  render(container = this.container, state, report = {}, handlers = {}) {
+    this.container = container;
+    const months = report.months || [];
+    const content = [
+      element('p', { className: 'eyebrow', text: 'RelatÃ³rio financeiro' }),
+      element('h2', { text: 'Horas e valores' }),
+      element('p', { className: 'screen-note', text: report.message || 'Acompanhe os valores recebidos e pendentes. Toque em um lanÃ§amento para informar o pagamento.' }),
+      this.createOverallCards(report),
+      element('h3', { className: 'report-section-title', text: 'RelatÃ³rio por mÃªs' }),
+      months.length ? element('div', { className: 'monthly-report-list' }, months.map((month) => this.createMonth(month, handlers))) : element('section', { className: 'empty-state' }, [element('h3', { text: 'Nenhuma hora extra cadastrada.' }), element('p', { text: 'Os lanÃ§amentos salvos aparecerÃ£o aqui, separados por mÃªs.' })])
     ];
-    const note = summary.message || 'O valor usa o salário e a jornada mensal cadastrados no perfil.';
-    container.replaceChildren(element('section', { className: 'screen' }, [element('p', { className: 'eyebrow', text: 'Resumo do período' }), element('h2', { text: 'Total a receber' }), element('dl', { className: 'summary-list' }, rows.flatMap(([term, description]) => [element('dt', { text: term }), element('dd', { text: description })])), element('p', { className: 'screen-note', text: note })]));
+    container.replaceChildren(element('section', { className: 'screen report-screen' }, content));
   }
-  formatDuration(minutes = 0) { const safe = Math.max(0, Number(minutes) || 0); return `${Math.floor(safe / 60)}h${String(safe % 60).padStart(2, '0')}`; }
+  createOverallCards(report) {
+    return element('div', { className: 'report-overview' }, [
+      this.createCard('A receber', report.pending, 'pending'),
+      this.createCard('JÃ¡ recebido', report.received, 'received'),
+      this.createCard('Total registrado', report.total, 'total')
+    ]);
+  }
+  createCard(title, summary = {}, variant) {
+    return element('article', { className: `report-card ${variant}` }, [element('span', { text: title }), element('strong', { text: formatCurrency(summary.totalPay) }), element('small', { text: `${duration(summary.minutes65)} a 65% Â· ${duration(summary.minutes100)} a 100%` })]);
+  }
+  createMonth(month, handlers) {
+    const [year, value] = month.key.split('-').map(Number);
+    return element('article', { className: 'monthly-report' }, [
+      element('div', { className: 'monthly-report-heading' }, [element('h4', { text: formatMonthYear(value, year) }), element('strong', { text: formatCurrency(month.total.totalPay) })]),
+      this.createBreakdown('A receber', month.pending, 'pending'),
+      this.createBreakdown('JÃ¡ recebido', month.received, 'received'),
+      element('div', { className: 'payment-entry-list' }, month.entries.map((entry) => this.createEntry(entry, handlers)))
+    ]);
+  }
+  createBreakdown(label, summary, variant) {
+    return element('div', { className: `payment-breakdown ${variant}` }, [element('strong', { text: label }), element('span', { text: `65%: ${duration(summary.minutes65)} (${formatCurrency(summary.value65)})` }), element('span', { text: `100%: ${duration(summary.minutes100)} (${formatCurrency(summary.value100)})` }), element('b', { text: formatCurrency(summary.totalPay) })]);
+  }
+  createEntry(entry, handlers) {
+    const isReceived = entry.paymentStatus === 'received';
+    return element('div', { className: 'payment-entry' }, [
+      element('span', { text: `${entry.date.split('-').reverse().join('/')} Â· ${entry.startTime} â†’ ${entry.endTime}` }),
+      element('strong', { text: formatCurrency(entry.pay || 0) }),
+      button(isReceived ? 'Marcar pendente' : 'Marcar recebido', { className: isReceived ? 'secondary-button compact-button' : 'primary-button compact-button', onClick: () => handlers.onPaymentChange?.(entry, isReceived ? 'pending' : 'received') })
+    ]);
+  }
+  renderMessage(message) { const note = this.container.querySelector('.screen-note'); if (note) note.textContent = message; }
 }

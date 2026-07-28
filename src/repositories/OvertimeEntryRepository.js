@@ -4,6 +4,12 @@ export class OvertimeEntryRepository {
   constructor(database) { this.database = database; }
   create(entry) { return this.database.add('overtimeEntries', entry.toObject?.() || entry); }
   update(entry) { return this.database.update('overtimeEntries', entry.toObject?.() || entry); }
+  async setPaymentStatus(entryOrId, paymentStatus) {
+    const source = typeof entryOrId === 'string' ? await this.findById(entryOrId) : entryOrId;
+    if (!source) throw new Error('LanÃ§amento nÃ£o encontrado.');
+    const entry = new OvertimeEntry(source).update({ paymentStatus, receivedAt: paymentStatus === 'received' ? new Date().toISOString() : null });
+    return this.update(entry);
+  }
   async delete(entryOrId) {
     const source = typeof entryOrId === 'string' ? await this.findById(entryOrId) : entryOrId;
     if (!source) throw new Error('Lançamento não encontrado.');
