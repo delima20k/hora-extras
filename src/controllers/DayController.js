@@ -7,15 +7,18 @@ const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: '
 export class DayController {
   constructor({ state, dateService, entryRepository, timeCalculationService = new TimeCalculationService(), onEntriesChanged = () => {} }) {
     this.state = state; this.dateService = dateService; this.entryRepository = entryRepository; this.timeCalculationService = timeCalculationService; this.onEntriesChanged = onEntriesChanged;
-    this.view = null; this.entries = []; this.formOpen = false; this.editingEntry = null; this.message = ''; this.requestId = 0;
+    this.view = null; this.entries = []; this.monthEntries = []; this.formOpen = false; this.editingEntry = null; this.message = ''; this.requestId = 0; this.valuesVisible = false;
   }
   get date() { return assertDateKey(this.state.selectedDate); }
   get employeeId() { if (!this.state.employee?.id) throw new Error('Cadastre o perfil antes de registrar horas extras.'); return this.state.employee.id; }
   async open(view, onBack, { alwaysShowForm = false } = {}) { const requestId = ++this.requestId; this.view = view; this.onBack = onBack; this.alwaysShowForm = alwaysShowForm; this.formOpen = this.formOpen || alwaysShowForm; this.view.renderLoading(); await this.refresh(requestId); }
   close() { this.requestId += 1; this.view = null; this.formOpen = false; this.editingEntry = null; this.alwaysShowForm = false; }
   async refresh(requestId = this.requestId) {
-    try { const entries = await this.entryRepository.findByDate(this.employeeId, this.date); if (requestId !== this.requestId) return; this.entries = entries; this.message = ''; }
-    catch (error) { if (requestId !== this.requestId) return; this.entries = []; this.message = error.message; }
+    try {
+      const [year, month] = this.date.split('-').map(Number);
+      const [entries, monthEntries] = await Promise.all([this.entryRepository.findByDate(this.employeeId, this.date), this.entryRepository.findByMonth(this.employeeId, month, year)]);
+      if (requestId !== this.requestId) return; this.entries = entries; this.monthEntries = monthEntries; this.message = '';
+    } catch (error) { if (requestId !== this.requestId) return; this.entries = []; this.monthEntries = []; this.message = error.message; }
     if (requestId === this.requestId) this.render();
   }
   render() {
@@ -24,22 +27,31 @@ export class DayController {
       const multiplier = this.timeCalculationService.getOvertimeMultiplier(entry.date);
       return { ...entry, displayDuration: this.timeCalculationService.formatDuration(entry.durationMinutes), endsNextDay: this.timeCalculationService.isNextDay(entry.startTime, entry.endTime), multiplier, pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings) };
     });
-    const totalDurationMinutes = this.timeCalculationService.sumDurations(this.entries);
-    const totals = entries.reduce((result, entry) => {
-      if (entry.multiplier === 2) result.minutes100 += entry.durationMinutes; else result.minutes65 += entry.durationMinutes;
-      result.pay += entry.pay; return result;
-    }, { minutes65: 0, minutes100: 0, pay: 0 });
-    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totalDurationMinutes), formOpen: this.formOpen, editingEntry: this.editingEntry, message: this.message, ...totals }, {
-      onBack: this.onBack, onAdd: () => this.openCreateForm(), onEdit: (entry) => this.openEditForm(entry), onCancel: () => this.closeForm(), onSave: (data) => this.save(data), onDelete: (entry) => this.delete(entry), onTimeChange: (startTime, endTime) => this.updateDurationPreview(startTime, endTime), onSelectDate: (date) => this.selectDate(date)
+    const totals = this.calculateTotals(entries);
+    const monthlyEntries = this.monthEntries.map((entry) => ({ ...entry, multiplier: this.timeCalculationService.getOvertimeMultiplier(entry.date), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings) }));
+    const monthlyTotals = this.calculateTotals(monthlyEntries);
+    const salary = Number(this.state.payrollSettings?.salary) || 0;
+    const monthlyWorkload = Number(this.state.payrollSettings?.monthlyWorkload) || 0;
+    const normalRate = salary > 0 && monthlyWorkload > 0 ? salary / monthlyWorkload : 0;
+    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totals.totalMinutes), formOpen: this.formOpen, editingEntry: this.editingEntry, message: this.message, showMonthSummary: this.alwaysShowForm, monthlyTotals, hourlyRates: { normal: normalRate, extra65: normalRate * 1.65, extra100: normalRate * 2 }, valuesVisible: this.valuesVisible, employee: this.state.employee, salary, ...totals }, {
+      onBack: this.onBack, onAdd: () => this.openCreateForm(), onEdit: (entry) => this.openEditForm(entry), onCancel: () => this.closeForm(), onSave: (data) => this.save(data), onDelete: (entry) => this.delete(entry), onTimeChange: (startTime, endTime) => this.updateDurationPreview(startTime, endTime), onSelectDate: (date) => this.selectDate(date), onToggleValues: () => this.toggleValues()
     });
+  }
+  calculateTotals(entries) {
+    const totalDurationMinutes = this.timeCalculationService.sumDurations(entries);
+    return entries.reduce((result, entry) => {
+      if (entry.multiplier === 2) { result.minutes100 += entry.durationMinutes; result.value100 += entry.pay; } else { result.minutes65 += entry.durationMinutes; result.value65 += entry.pay; }
+      result.pay += entry.pay; return result;
+    }, { minutes65: 0, minutes100: 0, pay: 0, totalMinutes: totalDurationMinutes, value65: 0, value100: 0 });
   }
   openCreateForm() { try { this.employeeId; this.formOpen = true; this.editingEntry = null; this.message = ''; } catch (error) { this.message = error.message; } this.render(); }
   openEditForm(entry) { this.formOpen = true; this.editingEntry = entry; this.message = ''; this.render(); }
   closeForm() { this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.message = ''; this.render(); }
   selectDate(date) {
-    try { this.state.selectedDate = assertDateKey(date); const [year, month] = date.split('-').map(Number); this.state.selectedYear = year; this.state.selectedMonth = month; this.formOpen = false; this.editingEntry = null; this.refresh(); }
+    try { this.state.selectedDate = assertDateKey(date); const [year, month] = date.split('-').map(Number); this.state.selectedYear = year; this.state.selectedMonth = month; this.formOpen = this.alwaysShowForm; this.editingEntry = null; this.refresh(); }
     catch (error) { this.message = error.message; this.render(); }
   }
+  toggleValues() { this.valuesVisible = !this.valuesVisible; this.render(); }
   updateDurationPreview(startTime, endTime) {
     if (!startTime || !endTime) return this.view?.updateDurationPreview({ text: '', isError: false });
     try {

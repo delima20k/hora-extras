@@ -24,11 +24,36 @@ export class DayView {
       element('p', { className: 'eyebrow', text: weekday.replace(/^./, (char) => char.toUpperCase()) }),
       element('h2', { text: dateParts.join(',').trim().replace(/^./, (char) => char.toUpperCase()) }),
       element('section', { className: 'work-schedule-card' }, [element('strong', { text: 'Horário normal de trabalho' }), element('p', { text: schedule || 'Cadastre seu horário normal no perfil para validar as horas extras.' })]),
+      model.showMonthSummary ? this.createMonthSummary(model) : null,
       model.message ? element('p', { className: 'day-message', role: 'status', 'aria-live': 'polite', text: model.message }) : null,
       entries, totals
     ];
     if (model.formOpen) content.push(this.createForm(model.editingEntry, handlers)); else content.push(button('Adicionar hora extra', { className: 'primary-button add-entry-button', onClick: handlers.onAdd }));
+    if (model.showMonthSummary) content.push(this.createHourlyRatesFooter(model, handlers));
     this.container.replaceChildren(element('section', { className: 'screen day-screen' }, content));
+  }
+  createMonthSummary(model) {
+    const totals = model.monthlyTotals || {}; const hidden = model.valuesVisible ? '' : ' is-hidden';
+    return element('section', { className: 'month-overtime-summary' }, [
+      element('strong', { text: 'Total de horas extras no mes' }),
+      element('div', { className: `sensitive-value${hidden}` }, [
+        element('span', { text: `65%: ${this.formatDuration(totals.minutes65)} · ${formatCurrency(totals.value65)}` }),
+        element('span', { text: `100%: ${this.formatDuration(totals.minutes100)} · ${formatCurrency(totals.value100)}` }),
+        element('b', { text: `Total: ${this.formatDuration(totals.totalMinutes)} · ${formatCurrency(totals.pay)}` })
+      ])
+    ]);
+  }
+  createHourlyRatesFooter(model, handlers) {
+    const hidden = model.valuesVisible ? '' : ' is-hidden'; const rates = model.hourlyRates || {};
+    return element('footer', { className: 'hourly-rates-footer' }, [
+      button('👁', { className: 'privacy-button', 'aria-label': model.valuesVisible ? 'Ocultar valores' : 'Mostrar valores', title: model.valuesVisible ? 'Ocultar valores' : 'Mostrar valores', onClick: handlers.onToggleValues }),
+      element('div', { className: 'rate-user' }, [element('strong', { text: model.employee?.name || 'Usuario' }), element('span', { className: `sensitive-value${hidden}`, text: `Salario: ${formatCurrency(model.salary)}` })]),
+      element('div', { className: `rate-values sensitive-value${hidden}` }, [
+        element('h2', { text: 'Valor da hora' }), element('p', { text: `Valor normal: ${formatCurrency(rates.normal)}` }),
+        element('h2', { text: 'Hora extra com 65%' }), element('p', { text: formatCurrency(rates.extra65) }),
+        element('h2', { text: 'Hora extra com 100%' }), element('p', { text: formatCurrency(rates.extra100) })
+      ])
+    ]);
   }
   createDateNavigator(selectedDate, handlers) {
     const selected = dateFromKey(selectedDate); const monday = new Date(selected); monday.setDate(selected.getDate() - ((selected.getDay() + 6) % 7));
