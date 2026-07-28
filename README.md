@@ -1,54 +1,82 @@
 # Controle de Horas Extras
 
-PWA mobile-first para organizar dados de perfil e preparar o controle local de horas extras. Esta primeira etapa não calcula horas extras, valores ou fechamento de folha.
+PWA mobile-first para registrar horas extras pessoais. O aplicativo funciona localmente no navegador: não exige conta, não envia dados a servidores e pode ser instalado em dispositivos Android compatíveis.
 
-## Tecnologias
+## Funcionalidades
 
-- JavaScript ES Modules, HTML e CSS
-- Vite e Vitest
-- IndexedDB com `fake-indexeddb` nos testes
-- Service worker manual e Web App Manifest
+- Perfil único com foto, jornada, salário e configuração de fechamento.
+- Calendário mensal navegável e persistência do período selecionado.
+- Lançamentos de horas extras, inclusive atravessando a meia-noite, com validação de conflitos e exclusão lógica.
+- Total mensal de duração e estimativa financeira simples baseada em salário mensal/jornada cadastrada.
+- Instalação PWA, cache offline após o primeiro acesso e suporte a tema escuro do sistema.
 
-## Executar
+> A estimativa financeira não calcula adicionais legais, impostos, banco de horas, períodos de folha ou encargos. Ela não substitui cálculo trabalhista ou de folha de pagamento.
+
+## Arquitetura e privacidade
+
+- JavaScript ES Modules, HTML5, CSS3, Vite e Vitest.
+- IndexedDB para perfil, jornada, configurações e lançamentos; LocalStorage somente para período do calendário e dispensa temporária da instalação.
+- O banco usa transações para salvar o perfil e índices por funcionário/data para consultas eficientes.
+- Avatares JPG, JPEG, PNG e WEBP de até 5 MB são redimensionados localmente e salvos como `Blob`.
+- Dados do usuário são inseridos na interface com APIs DOM seguras; não há envio de dados, analytics, tokens ou segredos.
+
+Não há Firebase Authentication, Firestore, Cloud Functions, App Check, SmartThings, bridge local, WebSocket, controle remoto, integrações de streaming ou backend neste projeto. Portanto, auditorias desses serviços são **não aplicáveis** à versão atual.
+
+## Desenvolvimento
 
 ```bash
 npm install
 npm run dev
 ```
 
-Para executar os testes e gerar a versão de produção:
+## Testes e validação
 
 ```bash
 npm run test
-npm run build
-npm run preview
+npm run test:e2e
+npm run build:firebase
+npm run build:github
+npm audit --omit=dev
 ```
 
-Abra a URL exibida pelo Vite no navegador. Para testar a instalação no celular, acesse a versão servida por HTTPS ou pela mesma rede local, quando aplicável. O card de instalação aparece apenas em navegadores que oferecem o evento de instalação.
+Os testes unitários cobrem modelos, persistência, cálculo de tempo, perfil, calendário, rotas e regressões de transação/cache. Os testes de navegador cobrem menu por teclado, acessibilidade com Axe, Service Worker e larguras de 320 a 1440 px.
 
-## Estrutura
+## Publicação
 
-- `src/models`: entidades e regras de validação.
-- `src/services`: IndexedDB, armazenamento leve, datas, imagens e PWA.
-- `src/repositories`: leitura e persistência do perfil e suas configurações.
-- `src/controllers`: navegação interna e fluxo de perfil.
-- `src/views`: layout persistente e telas renderizadas dentro de `main#app`.
-- `public`: manifesto, service worker, ícones e avatar padrão.
+### Firebase Hosting
 
-## Dados locais e avatar
+O `firebase.json` serve `dist` e redireciona rotas para `index.html`.
 
-Todos os dados ficam no IndexedDB do próprio dispositivo. Há somente um perfil principal, identificado por `appSettings.primaryEmployeeId`. Salvar o perfil atualiza funcionário, jornada, folha e ponteiro em uma única transação.
+```bash
+npm run build:firebase
+firebase login
+firebase use --add
+firebase deploy --only hosting
+```
 
-Fotos JPG, JPEG, PNG e WEBP de até 5 MB são redimensionadas localmente para até 512×512 px, comprimidas e armazenadas como `Blob`. Nenhuma imagem ou dado é enviado a servidor.
+O Firebase CLI e o projeto Firebase devem ser configurados pelo responsável pela conta. Nenhuma credencial é armazenada neste repositório.
 
-## Implementado
+### GitHub Pages
 
-- Header, menu lateral acessível e rotas hash `today`, `month`, `total` e `profile`.
-- Perfil, jornada, salário, dia de fechamento e estratégia para meses sem o dia escolhido.
-- IndexedDB, prevenção de perfil principal duplicado e salvamento atômico.
-- Prévia de avatar, PWA instalável e cache offline após o primeiro carregamento.
-- Testes de modelos, persistência transacional e navegação.
+```bash
+npm run build:github
+```
 
-## Próximas etapas
+Publique o conteúdo de `dist` no repositório `delima20k/hora-extras` usando GitHub Pages. Esse build usa a base `/hora-extras/`; o build Firebase usa `/`.
 
-Calendário, lançamentos de horas, cálculo de duração, adicionais, hora-base, períodos reais de folha, histórico, relatórios e exportações permanecem fora do escopo atual.
+## Auditoria de produção
+
+| Achado | Correção |
+| --- | --- |
+| Calendário não recebia mês/ano inicial válidos | Estado padronizado em `selectedMonth` e `selectedYear`. |
+| Consulta de lançamentos filtrava todo o histórico | Índice composto `employeeId_date` e consulta por faixa mensal. |
+| Atualizações assíncronas podiam renderizar tela fechada | Controladores de dia e total cancelam respostas obsoletas. |
+| Menu lateral não continha foco | Foco inicial, retorno ao gatilho, Escape, overlay e ciclo de Tab implementados. |
+| Cache do Service Worker podia interferir no Vite local | Módulos de desenvolvimento não são cacheados; cache de produção é versionado. |
+| Contraste do calendário abaixo de WCAG AA | Cores ajustadas e verificadas com Axe. |
+| Documentação descrevia uma etapa antiga | README atualizado com comportamento, limites, testes e deploy atuais. |
+
+## Limites conhecidos
+
+- O aplicativo é local a cada navegador/dispositivo; não há sincronização ou backup em nuvem.
+- A licença ainda não foi definida pelo proprietário do repositório.

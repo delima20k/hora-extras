@@ -9,4 +9,10 @@ export function element(tag, options = {}, children = []) {
   children.flat().filter(Boolean).forEach((child) => node.append(child)); return node;
 }
 export function button(text, options = {}) { return element('button', { type: 'button', text, ...options }); }
-export function field(labelText, control, hint = '') { const id = control.id; const label = element('label', { for: id, text: labelText }); return element('div', { className: 'form-field' }, [label, control, hint ? element('small', { className: 'field-hint', text: hint }) : null]); }
+export function field(labelText, control, hint = '') {
+  const id = control.id;
+  const label = element('label', { for: id, text: labelText });
+  const hintId = `${id}-hint`;
+  if (hint) control.setAttribute('aria-describedby', hintId);
+  return element('div', { className: 'form-field' }, [label, control, hint ? element('small', { id: hintId, className: 'field-hint', text: hint }) : null]);
+}

@@ -4,21 +4,52 @@
 @import './calendar.css';
 @import './day.css';
 
-:root { color: #19203d; background: #f7f8ff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-synthesis: none; }
+:root {
+  --black: #241a14;
+  --orange: #d76522;
+  --orange-dark: #a94714;
+  --beige: #f6ead9;
+  --cream: #fffaf3;
+  --gray: #665d55;
+  --gray-light: #ded7cf;
+  --yellow: #f2bc3d;
+  --red: #b6382c;
+  --red-dark: #86251d;
+  --shadow: 0 8px 22px rgb(75 45 23 / 12%);
+  color: var(--black);
+  background: var(--beige);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: #f7f8ff; }
-button, input, select, textarea { font: inherit; }
+body { margin: 0; min-width: 320px; background: var(--beige); }
+button, input, select, textarea { font: inherit; -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #8091ff; outline-offset: 2px; }
+button:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .screen { max-width: 680px; margin: 0 auto; padding: 28px 20px calc(36px + env(safe-area-inset-bottom)); }
-.screen h2 { margin: 0 0 22px; color: #171d3a; font-size: 1.75rem; }
-.eyebrow { margin: 0 0 8px; color: #5362be; font-weight: 700; }
-.large-date { margin: 0; color: #586079; font-size: 1.08rem; }
-.empty-state, .summary-list, .install-card { border: 1px solid #e1e5fa; border-radius: 18px; background: #fff; box-shadow: 0 5px 18px rgb(32 45 106 / 6%); }
+.screen h2 { margin: 0 0 22px; color: var(--black); font-size: 1.75rem; }
+.eyebrow { margin: 0 0 8px; color: var(--orange-dark); font-weight: 750; }
+.large-date { margin: 0; color: var(--gray); font-size: 1.08rem; }
+.empty-state, .summary-list, .install-card { border: 1px solid #e9cda9; border-radius: 18px; background: var(--cream); box-shadow: var(--shadow); }
 .empty-state { margin-top: 28px; padding: 22px; }
-.empty-state h3 { margin: 0 0 8px; font-size: 1.05rem; }.empty-state p, .screen-note { margin: 0; color: #606982; line-height: 1.5; }
+.empty-state h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.empty-state p, .screen-note { margin: 0; color: var(--gray); line-height: 1.5; }
 .form-grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
 .summary-list { display: grid; grid-template-columns: 1fr auto; gap: 0; margin: 0; overflow: hidden; }
-.summary-list dt, .summary-list dd { margin: 0; padding: 16px; border-bottom: 1px solid #edf0fa; }.summary-list dt:nth-last-of-type(1), .summary-list dd:last-child { border-bottom: 0; }.summary-list dt { color: #59627e; }.summary-list dd { font-weight: 700; text-align: right; }
+.summary-list dt, .summary-list dd { margin: 0; padding: 16px; border-bottom: 1px solid #ecdcca; }
+.summary-list dt:nth-last-of-type(1), .summary-list dd:last-child { border-bottom: 0; }
+.summary-list dt { color: var(--gray); }.summary-list dd { color: var(--black); font-weight: 750; text-align: right; }
 .screen-note { margin-top: 18px; }.startup-error { padding: 40px 24px; text-align: center; }
+
 @media (min-width: 520px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 359px) { .screen { padding-right: 16px; padding-left: 16px; } .summary-list dt, .summary-list dd { padding: 13px 10px; font-size: .92rem; } }
+@media (min-width: 768px) { .screen { max-width: 760px; padding-top: 36px; } .app-header { padding-right: 24px; padding-left: 24px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+
+@media (prefers-color-scheme: dark) {
+  :root { --black: #fff5ea; --beige: #17110d; --cream: #241a14; --gray: #e1c8b2; --gray-light: #5a4638; --orange: #df7135; --orange-dark: #ffb077; --yellow: #f2bc3d; --shadow: none; }
+  .form-field input, .form-field select, .form-field textarea { border-color: #745a46; color: var(--black); background: #1b130e; }
+  .calendar-day.is-outside-month { color: #c3aa94; }
+}

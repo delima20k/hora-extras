@@ -1,9 +1,7 @@
 .calendar-navigation { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; margin: 4px 0 18px; }
-.calendar-title { margin: 0; color: #1b254e; font-size: 1.1rem; text-align: center; }
-.calendar-nav-button { width: 44px; height: 44px; border: 1px solid #d4daf2; border-radius: 12px; color: #30439d; background: #fff; font-size: 1.9rem; line-height: 1; }
-.calendar-nav-button:hover { background: #edf0ff; }
+.calendar-title { margin: 0; color: var(--black); font-size: 1.1rem; text-align: center; }
+.calendar-nav-button { width: 44px; height: 44px; border: 1px solid #d9b78e; border-radius: 12px; color: var(--black); background: var(--cream); font-size: 1.9rem; line-height: 1; }.calendar-nav-button:hover { background: var(--yellow); }
 .calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.calendar-weekdays { margin-bottom: 6px; color: #66708d; font-size: .78rem; font-weight: 750; text-align: center; }
-.calendar-day { aspect-ratio: 1; min-width: 44px; min-height: 44px; border: 1px solid transparent; border-radius: 50%; color: #263056; background: transparent; font-weight: 650; }
-.calendar-day:hover { background: #edf0ff; }.calendar-day.is-outside-month { color: #a1a9c1; }.calendar-day.is-today { border-color: #435bd0; background: #e3e8ff; color: #24358e; }.calendar-day.is-selected { border-color: #3346a8; color: #fff; background: #3346a8; }
+.calendar-weekdays { margin-bottom: 6px; color: var(--gray); font-size: .78rem; font-weight: 800; text-align: center; }
+.calendar-day { aspect-ratio: 1; min-width: 44px; min-height: 44px; border: 1px solid transparent; border-radius: 50%; color: var(--black); background: transparent; font-weight: 700; }.calendar-day:hover { background: #f9d994; }.calendar-day.is-outside-month { color: #6a6057; }.calendar-day.is-today { border-color: var(--orange); background: #ffe8bc; color: var(--orange-dark); }.calendar-day.is-selected { border-color: var(--orange-dark); color: #fff; background: var(--orange); }
 @media (min-width: 520px) { .calendar-day { min-height: 58px; } }

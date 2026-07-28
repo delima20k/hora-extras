@@ -1,4 +1,4 @@
-export const ROUTES = Object.freeze({ today: 'Dia atual', month: 'Mês', total: 'Total a receber', profile: 'Perfil' });
+export const ROUTES = Object.freeze({ today: 'Dia atual', hours: 'Adicionar horas', month: 'Mês', total: 'Total a receber', profile: 'Perfil' });
 export const WORK_DAYS = Object.freeze([
   ['monday', 'Segunda-feira'], ['tuesday', 'Terça-feira'], ['wednesday', 'Quarta-feira'], ['thursday', 'Quinta-feira'], ['friday', 'Sexta-feira'], ['saturday', 'Sábado'], ['sunday', 'Domingo']
 ]);

@@ -8,13 +8,21 @@ import { DayView } from '../views/DayView.js';
 export class NavigationController {
   constructor({ layout, state, dateService, onNavigate, profileActions, calendarController, dayController, totalController }) {
     this.layout = layout; this.state = state; this.dateService = dateService; this.onNavigate = onNavigate; this.profileActions = profileActions; this.calendarController = calendarController; this.dayController = dayController; this.totalController = totalController;
-    this.views = { today: new TodayView(), month: new MonthView(), total: new TotalView(), profile: new ProfileView(), day: new DayView(this.layout.refs.main) };
+    this.views = { today: new TodayView(), hours: new DayView(this.layout.refs.main), month: new MonthView(), total: new TotalView(), profile: new ProfileView(), day: new DayView(this.layout.refs.main) };
   }
-  routeFromHash() { const route = window.location.hash.replace('#', ''); return ROUTES[route] || route === 'day' ? route : 'today'; }
-  navigate(route) { const valid = ROUTES[route] || route === 'day' ? route : 'today'; if (window.location.hash !== `#${valid}`) window.location.hash = valid; else this.render(valid); }
+  isKnownRoute(route) { return Boolean(ROUTES[route]) || route === 'day'; }
+  routeFromHash() { const route = window.location.hash.replace('#', ''); return this.isKnownRoute(route) ? route : 'today'; }
+  navigate(route) { const valid = this.isKnownRoute(route) ? route : 'today'; if (window.location.hash !== `#${valid}`) window.location.hash = valid; else this.render(valid); }
   render(route = this.routeFromHash()) {
-    const valid = ROUTES[route] || route === 'day' ? route : 'today'; if (valid === 'day' && !this.state.selectedDate) return this.navigate('month'); this.state.currentRoute = valid; this.layout.updateHeader(valid === 'day' ? 'Dia' : ROUTES[valid], this.state.employee, this.state.avatarUrl); this.onNavigate(valid);
+    const valid = this.isKnownRoute(route) ? route : 'today'; if (valid === 'day' && !this.state.selectedDate) return this.navigate('month');
+    if (['day', 'hours'].includes(this.state.currentRoute) && !['day', 'hours'].includes(valid)) this.dayController?.close();
+    if (this.state.currentRoute === 'total' && valid !== 'total') this.totalController?.close();
+    this.state.currentRoute = valid; this.layout.updateHeader(['day', 'hours'].includes(valid) ? 'Adicionar horas' : ROUTES[valid], this.state.employee, this.state.avatarUrl); this.onNavigate(valid);
     if (valid === 'today') this.views.today.render(this.layout.refs.main, this.state, { date: this.dateService.now() });
+    if (valid === 'hours') {
+      if (!this.state.selectedDate) this.state.selectedDate = this.dateService.toDateKey(this.dateService.now());
+      this.dayController.open(this.views.hours, () => this.navigate('month'));
+    }
     if (valid === 'month') this.views.month.render(this.layout.refs.main, this.state, { calendarController: this.calendarController });
     if (valid === 'total') {
       if (this.totalController) this.totalController.open(this.views.total);

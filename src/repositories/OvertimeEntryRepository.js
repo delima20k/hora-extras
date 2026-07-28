@@ -11,6 +11,15 @@ export class OvertimeEntryRepository {
   }
   findById(id) { return this.database.getById('overtimeEntries', id); }
   async findAll(employeeId, includeDeleted = false) { const entries = await this.database.getByIndex('overtimeEntries', 'employeeId', employeeId); return entries.filter((entry) => includeDeleted || entry.status === 'active').sort((left, right) => left.date.localeCompare(right.date) || left.startTime.localeCompare(right.startTime)); }
-  async findByDate(employeeId, date, includeDeleted = false) { return (await this.findAll(employeeId, includeDeleted)).filter((entry) => entry.date === date); }
-  async findByMonth(employeeId, month, year, includeDeleted = false) { const prefix = `${year}-${String(month).padStart(2, '0')}-`; return (await this.findAll(employeeId, includeDeleted)).filter((entry) => entry.date.startsWith(prefix)); }
+  async findByDate(employeeId, date, includeDeleted = false) {
+    const entries = await this.database.getByIndex('overtimeEntries', 'employeeId_date', [employeeId, date]);
+    return this.filterAndSort(entries, includeDeleted);
+  }
+  async findByMonth(employeeId, month, year, includeDeleted = false) {
+    const prefix = `${year}-${String(month).padStart(2, '0')}-`;
+    const range = IDBKeyRange.bound([employeeId, prefix], [employeeId, `${prefix}\uffff`]);
+    const entries = await this.database.getByIndexRange('overtimeEntries', 'employeeId_date', range);
+    return this.filterAndSort(entries, includeDeleted);
+  }
+  filterAndSort(entries, includeDeleted) { return entries.filter((entry) => includeDeleted || entry.status === 'active').sort((left, right) => left.date.localeCompare(right.date) || left.startTime.localeCompare(right.startTime)); }
 }

@@ -22,6 +22,6 @@ describe('TotalController', () => {
     await controller.open(view);
 
     expect(entryRepository.findByMonth).toHaveBeenCalledWith('employee-1', 7, 2026);
-    expect(view.render).toHaveBeenCalledWith(state, expect.objectContaining({ daysWithOvertime: 2, totalMinutes: 210, totalPay: 35 }));
+    expect(view.render).toHaveBeenCalledWith(state, expect.objectContaining({ daysWithOvertime: 2, totalMinutes: 210, minutes65: 210, minutes100: 0, totalPay: 57.75 }));
   });
 });
