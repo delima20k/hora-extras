@@ -9,5 +9,5 @@ describe('ImageService', () => {
 });
 
 describe('PWA assets', () => {
-  it('declara manifesto, service worker e fallback da SPA', () => { const manifest = JSON.parse(readFileSync('public/manifest.webmanifest', 'utf8')); const worker = readFileSync('public/sw.js', 'utf8'); expect(manifest.icons).toHaveLength(2); expect(worker).toContain("caches.match('/index.html')"); expect(worker).toContain('CACHE_VERSION'); });
+  it('declara manifesto, service worker e fallback da SPA', () => { const manifest = JSON.parse(readFileSync('public/manifest.webmanifest', 'utf8')); const worker = readFileSync('public/sw.js', 'utf8'); expect(manifest.icons).toHaveLength(2); expect(manifest.start_url).toBe('./#today'); expect(manifest.icons[0].src).toBe('icons/icon-192.png'); expect(worker).toContain("caches.match(appUrl('index.html'))"); expect(worker).toContain('CACHE_VERSION'); });
 });

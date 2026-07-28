@@ -3,12 +3,13 @@ import { button, element, field } from '../utils/dom.js';
 import { formatCurrency } from '../utils/formatters.js';
 
 const input = (id, type, value = '') => element('input', { id, type, value });
+const defaultAvatar = () => `${import.meta.env.BASE_URL}default-avatar.svg`;
 
 export class ProfileView {
   render(container, state, { avatarUrl, onSubmit, onFileChange }) {
     const employee = state.employee || {}; const schedule = state.workSchedule || {}; const payroll = state.payrollSettings || {};
     const form = element('form', { className: 'profile-form', novalidate: '' }); const status = element('p', { className: 'form-status', 'aria-live': 'polite' });
-    const avatar = element('img', { className: 'profile-avatar', src: avatarUrl || '/default-avatar.svg', alt: 'Prévia da foto de perfil' });
+    const avatar = element('img', { className: 'profile-avatar', src: avatarUrl || defaultAvatar(), alt: 'Prévia da foto de perfil' });
     const file = element('input', { id: 'avatar', type: 'file', accept: 'image/jpeg,image/png,image/webp' }); file.addEventListener('change', () => onFileChange(file.files?.[0], avatar, status));
     const name = input('name', 'text', employee.name || ''); name.required = true; name.maxLength = 120; name.autocomplete = 'name';
     const salary = input('salary', 'text', payroll.salary ? formatCurrency(payroll.salary) : ''); salary.required = true; salary.inputMode = 'decimal';
