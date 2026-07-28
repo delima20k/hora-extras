@@ -38,7 +38,7 @@ export class DayController {
     const salary = Number(this.state.payrollSettings?.salary) || 0;
     const monthlyWorkload = Number(this.state.payrollSettings?.monthlyWorkload) || 0;
     const normalRate = salary > 0 && monthlyWorkload > 0 ? salary / monthlyWorkload : 0;
-    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totals.totalMinutes), formOpen: this.formOpen && !this.isClosed, editingEntry: this.editingEntry, message: this.message, showMonthSummary: this.alwaysShowForm, monthlyTotals, hourlyRates: { normal: normalRate, extra65: normalRate * 1.65, extra100: normalRate * 2 }, valuesVisible: this.valuesVisible, employee: this.state.employee, salary, isClosed: this.isClosed, closedMessage: this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}. Este dia nÃ£o aceita novos lanÃ§amentos.` : '', ...totals }, {
+    this.view.render({ date: this.date, workSchedule: this.state.workSchedule, entries, totalDuration: this.timeCalculationService.formatDuration(totals.totalMinutes), formOpen: this.formOpen && !this.isClosed, editingEntry: this.editingEntry, message: this.message, showMonthSummary: this.alwaysShowForm, monthlyTotals, hourlyRates: { normal: normalRate, extra65: normalRate * 1.65, extra100: normalRate * 2 }, valuesVisible: this.valuesVisible, employee: this.state.employee, salary, isClosed: this.isClosed, closedMessage: this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}. Este dia não aceita novos lançamentos.` : '', ...totals }, {
       onBack: this.onBack, onAdd: () => this.openCreateForm(), onEdit: (entry) => this.openEditForm(entry), onCancel: () => this.closeForm(), onSave: (data) => this.save(data), onDelete: (entry) => this.delete(entry), onTimeChange: (startTime, endTime) => this.updateDurationPreview(startTime, endTime), onSelectDate: (date) => this.selectDate(date), onToggleValues: () => this.toggleValues()
     });
   }
@@ -57,7 +57,7 @@ export class DayController {
     catch (error) { this.message = error.message; this.render(); }
   }
   toggleValues() { this.valuesVisible = !this.valuesVisible; this.render(); }
-  ensureOpenPeriod() { if (this.isClosed) throw new Error(this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha jÃ¡ foi fechada.'); }
+  ensureOpenPeriod() { if (this.isClosed) throw new Error(this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha já foi fechada.'); }
   updateDurationPreview(startTime, endTime) {
     if (!startTime || !endTime) return this.view?.updateDurationPreview({ text: '', isError: false });
     try {
@@ -85,7 +85,7 @@ export class DayController {
     } catch (error) { this.message = error.message || 'Não foi possível salvar a hora extra.'; this.render(); }
   }
   async delete(entry) {
-    if (this.isClosed) { this.message = this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha jÃ¡ foi fechada.'; this.render(); return; }
+    if (this.isClosed) { this.message = this.closedPeriod ? `Esta folha foi fechada em ${this.payrollPeriodService.formatDate(this.closedPeriod.endDate)}.` : 'Esta folha já foi fechada.'; this.render(); return; }
     if (!window.confirm('Deseja realmente excluir este lançamento?')) return;
     try { await this.entryRepository.delete(entry); this.entries = await this.entryRepository.findByDate(this.employeeId, this.date); this.message = 'Lançamento excluído.'; this.onEntriesChanged({ date: this.date }); this.render(); }
     catch (error) { this.message = error.message || 'Não foi possível excluir o lançamento.'; this.render(); }

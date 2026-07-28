@@ -35,14 +35,14 @@ export class TotalController {
       const received = this.summarize(currentEntries.filter((entry) => entry.paymentStatus === 'received'));
       const pending = this.summarize(currentEntries.filter((entry) => entry.paymentStatus !== 'received'));
       if (requestId !== this.requestId || !this.view) return;
-      this.view.render(this.view.container, this.state, { months, total, received, pending, closures, currentPeriod, message: employeeId ? '' : 'Cadastre seu perfil para gerar o relatÃ³rio.' }, { onPaymentChange: (entry, paymentStatus) => this.setPaymentStatus(entry, paymentStatus) });
+      this.view.render(this.view.container, this.state, { months, total, received, pending, closures, currentPeriod, message: employeeId ? '' : 'Cadastre seu perfil para gerar o relatório.' }, { onPaymentChange: (entry, paymentStatus) => this.setPaymentStatus(entry, paymentStatus) });
     } catch (error) {
       if (requestId !== this.requestId || !this.view) return;
-      this.view.render(this.view.container, this.state, { months: [], closures: [], total: emptyBreakdown(), received: emptyBreakdown(), pending: emptyBreakdown(), message: error.message || 'NÃ£o foi possÃ­vel carregar o relatÃ³rio.' });
+      this.view.render(this.view.container, this.state, { months: [], closures: [], total: emptyBreakdown(), received: emptyBreakdown(), pending: emptyBreakdown(), message: error.message || 'Não foi possível carregar o relatório.' });
     }
   }
   async setPaymentStatus(entry, paymentStatus) {
     try { await this.entryRepository.setPaymentStatus(entry, paymentStatus); await this.refresh(); }
-    catch (error) { if (this.view) this.view.renderMessage(error.message || 'NÃ£o foi possÃ­vel atualizar o pagamento.'); }
+    catch (error) { if (this.view) this.view.renderMessage(error.message || 'Não foi possível atualizar o pagamento.'); }
   }
 }

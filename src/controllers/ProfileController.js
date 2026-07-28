@@ -31,7 +31,7 @@ export class ProfileController {
     if (submitButton.disabled) return;
     submitButton.disabled = true;
     status.textContent = 'Salvando perfil...';
-    status.className = 'form-status';
+    status.className = 'form-status loading';
     status.setAttribute('role', 'status');
     try {
       const result = await this.profileRepository.saveProfileBundle({
@@ -41,6 +41,7 @@ export class ProfileController {
         workSchedule: { workDays: values.workDays, startTime: values.startTime, endTime: values.endTime, breakDurationMinutes: values.breakDurationMinutes },
         payrollSettings: { salary: parseSalary(values.salary), payrollClosingDay: values.payrollClosingDay, invalidClosingDayStrategy: values.invalidClosingDayStrategy, monthlyWorkload: values.monthlyWorkload }
       });
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       this.pendingAvatar = undefined;
       this.imageService.revokePreview(this.previewUrl);
       this.previewUrl = null;

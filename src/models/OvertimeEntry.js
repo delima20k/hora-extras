@@ -11,7 +11,7 @@ export class OvertimeEntry {
     if (/<\/?[a-z][^>]*>/i.test(this.notes)) throw new Error('A observação não aceita HTML.');
     if (!Number.isInteger(this.durationMinutes) || this.durationMinutes <= 0) throw new Error('Duração inválida.');
     if (!['active', 'deleted'].includes(status)) throw new Error('Status inválido.');
-    if (!['pending', 'received'].includes(paymentStatus)) throw new Error('SituaÃ§Ã£o de pagamento invÃ¡lida.');
+    if (!['pending', 'received'].includes(paymentStatus)) throw new Error('Situação de pagamento inválida.');
     this.status = status; this.paymentStatus = paymentStatus; this.receivedAt = paymentStatus === 'received' ? (receivedAt || new Date().toISOString()) : null; this.createdAt = createdAt; this.updatedAt = updatedAt;
   }
   update({ startTime = this.startTime, endTime = this.endTime, notes = this.notes, paymentStatus = this.paymentStatus, receivedAt = this.receivedAt } = {}, timeCalculationService = defaultTimeCalculationService) { return new OvertimeEntry({ ...this.toObject(), startTime, endTime, notes, paymentStatus, receivedAt, status: this.status, createdAt: this.createdAt, updatedAt: new Date().toISOString() }, timeCalculationService); }
