@@ -16,6 +16,7 @@ export class DayView {
     const totals = element('section', { className: 'overtime-summary' }, [
       element('strong', { text: `Total do dia: ${model.totalDuration}` }),
       element('span', { text: `65%: ${this.formatDuration(model.minutes65)} · 100%: ${this.formatDuration(model.minutes100)}` }),
+      model.nightMinutes ? element('span', { text: `Noturno 20%: ${this.formatDuration(model.nightMinutes)} · ${formatCurrency(model.nightPay)}` }) : null,
       element('span', { className: 'overtime-pay', text: `Valor estimado: ${formatCurrency(model.pay)}` })
     ]);
     const content = [
@@ -70,6 +71,7 @@ export class DayView {
   }
   createEntry(entry, handlers, isClosed = false) {
     const details = [element('strong', { text: `${entry.startTime} → ${entry.endTime}` }), element('span', { className: 'entry-duration', text: `Duração: ${entry.displayDuration}` }), element('span', { className: 'entry-rate', text: `Adicional: ${Math.round((entry.multiplier - 1) * 100)}% · ${formatCurrency(entry.pay)}` })];
+    if (entry.nightMinutes) details.push(element('span', { className: 'entry-rate', text: `Noturno: 20% em ${this.formatDuration(entry.nightMinutes)}` }));
     if (entry.endsNextDay) details.push(element('span', { className: 'entry-next-day', text: 'Termina no dia seguinte' }));
     if (entry.notes) details.push(element('p', { className: 'entry-notes', text: entry.notes }));
     return element('article', { className: 'overtime-entry' }, [element('div', { className: 'entry-details' }, details), isClosed ? element('span', { className: 'entry-closed', text: 'Fechado' }) : element('div', { className: 'entry-actions' }, [button('Editar', { className: 'secondary-button', onClick: () => handlers.onEdit(entry) }), button('Excluir', { className: 'danger-button', onClick: () => handlers.onDelete(entry) })])]);

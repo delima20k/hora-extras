@@ -46,10 +46,17 @@ export class TimeCalculationService {
     const { value } = this.getDateParts(date);
     return value.getDay() === 0 || this.isHoliday(date) ? 2 : 1.65;
   }
-  calculateOvertimePay(durationMinutes, date, payrollSettings) {
+  calculateNightMinutes(startTime, endTime) {
+    if (!this.isValidTime(startTime) || !this.isValidTime(endTime)) return 0;
+    const start = this.parseTimeToMinutes(startTime); const end = start + this.calculateDuration(startTime, endTime);
+    const nightStart = 22 * 60 + 30; const nightEnd = MINUTES_PER_DAY + 5 * 60;
+    return Math.max(0, Math.min(end, nightEnd) - Math.max(start, nightStart));
+  }
+  calculateOvertimePay(durationMinutes, date, payrollSettings, nightMinutes = 0) {
     const salary = Number(payrollSettings?.salary); const monthlyWorkload = Number(payrollSettings?.monthlyWorkload);
     if (!Number.isFinite(salary) || salary <= 0 || !Number.isFinite(monthlyWorkload) || monthlyWorkload <= 0) return 0;
-    return (durationMinutes / 60) * (salary / monthlyWorkload) * this.getOvertimeMultiplier(date);
+    const hourlyRate = salary / monthlyWorkload;
+    return (durationMinutes / 60) * hourlyRate * this.getOvertimeMultiplier(date) + (Math.max(0, Number(nightMinutes) || 0) / 60) * hourlyRate * 0.2;
   }
   isNormalWorkday(date, schedule) {
     if (!schedule?.workDays?.length || this.isHoliday(date)) return false;

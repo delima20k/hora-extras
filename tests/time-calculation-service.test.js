@@ -18,6 +18,9 @@ describe('TimeCalculationService', () => {
     expect(service.getOvertimeMultiplier('2026-06-13')).toBe(2);
     expect(service.getOvertimeMultiplier('2026-12-25')).toBe(2);
     expect(service.calculateOvertimePay(60, '2026-07-27', { salary: 2200, monthlyWorkload: 220 })).toBe(16.5);
+    expect(service.calculateNightMinutes('21:30', '05:30')).toBe(390);
+    expect(service.calculateNightMinutes('22:30', '06:00')).toBe(390);
+    expect(service.calculateOvertimePay(60, '2026-07-27', { salary: 2200, monthlyWorkload: 220 }, 60)).toBe(18.5);
     expect(service.overlapsNormalSchedule('14:20', '18:00', { startTime: '06:00', endTime: '14:20' })).toBe(false);
     expect(service.overlapsNormalSchedule('13:00', '15:00', { startTime: '06:00', endTime: '14:20' })).toBe(true);
     const schedule = { workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '06:00', endTime: '14:20' };

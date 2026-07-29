@@ -1,7 +1,7 @@
 import { TimeCalculationService } from '../services/TimeCalculationService.js';
 import { PayrollPeriodService } from '../services/PayrollPeriodService.js';
 
-const emptyBreakdown = () => ({ minutes65: 0, minutes100: 0, value65: 0, value100: 0, totalMinutes: 0, totalPay: 0 });
+const emptyBreakdown = () => ({ minutes65: 0, minutes100: 0, value65: 0, value100: 0, nightMinutes: 0, nightPay: 0, totalMinutes: 0, totalPay: 0 });
 
 export class TotalController {
   constructor({ state, entryRepository, closureRepository, payrollPeriodService = new PayrollPeriodService(), payrollClosureService, dateService, timeCalculationService = new TimeCalculationService() }) { this.state = state; this.entryRepository = entryRepository; this.closureRepository = closureRepository; this.payrollPeriodService = payrollPeriodService; this.payrollClosureService = payrollClosureService; this.dateService = dateService; this.timeCalculationService = timeCalculationService; this.view = null; this.requestId = 0; }
@@ -9,9 +9,12 @@ export class TotalController {
   close() { this.requestId += 1; this.view = null; }
   addToBreakdown(breakdown, entry) {
     const multiplier = this.timeCalculationService.getOvertimeMultiplier(entry.date);
-    const value = this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings);
+    const nightMinutes = this.timeCalculationService.calculateNightMinutes(entry.startTime, entry.endTime);
+    const nightPay = this.timeCalculationService.calculateOvertimePay(0, entry.date, this.state.payrollSettings, nightMinutes);
+    const value = this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings, nightMinutes);
     breakdown.totalMinutes += entry.durationMinutes; breakdown.totalPay += value;
-    if (multiplier === 2) { breakdown.minutes100 += entry.durationMinutes; breakdown.value100 += value; } else { breakdown.minutes65 += entry.durationMinutes; breakdown.value65 += value; }
+    breakdown.nightMinutes += nightMinutes; breakdown.nightPay += nightPay;
+    if (multiplier === 2) { breakdown.minutes100 += entry.durationMinutes; breakdown.value100 += value - nightPay; } else { breakdown.minutes65 += entry.durationMinutes; breakdown.value65 += value - nightPay; }
   }
   summarize(entries) { return entries.reduce((summary, entry) => { this.addToBreakdown(summary, entry); return summary; }, emptyBreakdown()); }
   async refresh(requestId = this.requestId) {
@@ -25,7 +28,8 @@ export class TotalController {
       const currentEntries = currentPeriod ? entries.filter((entry) => this.payrollPeriodService.getPeriodForDate(entry.date, this.state.payrollSettings)?.endDate === currentPeriod.endDate) : entries;
       const reports = new Map();
       for (const source of entries) {
-        const entry = { ...source, pay: this.timeCalculationService.calculateOvertimePay(source.durationMinutes, source.date, this.state.payrollSettings), isClosed: this.payrollPeriodService.isClosed(source.date, this.state.payrollSettings, now) };
+        const nightMinutes = this.timeCalculationService.calculateNightMinutes(source.startTime, source.endTime);
+        const entry = { ...source, nightMinutes, nightPay: this.timeCalculationService.calculateOvertimePay(0, source.date, this.state.payrollSettings, nightMinutes), pay: this.timeCalculationService.calculateOvertimePay(source.durationMinutes, source.date, this.state.payrollSettings, nightMinutes), isClosed: this.payrollPeriodService.isClosed(source.date, this.state.payrollSettings, now) };
         const monthKey = entry.date.slice(0, 7);
         if (!reports.has(monthKey)) reports.set(monthKey, { key: monthKey, entries: [], pending: emptyBreakdown(), received: emptyBreakdown(), total: emptyBreakdown() });
         const report = reports.get(monthKey); report.entries.push(entry); this.addToBreakdown(report.total, entry); this.addToBreakdown(entry.paymentStatus === 'received' ? report.received : report.pending, entry);

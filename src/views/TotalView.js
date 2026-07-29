@@ -28,7 +28,8 @@ export class TotalView {
     ]);
   }
   createCard(title, summary = {}, variant) {
-    return element('article', { className: `report-card ${variant}` }, [element('span', { text: title }), element('strong', { text: formatCurrency(summary.totalPay) }), element('small', { text: `${duration(summary.minutes65)} a 65% · ${duration(summary.minutes100)} a 100%` })]);
+    const night = summary.nightMinutes ? ` · ${duration(summary.nightMinutes)} noturno (+${formatCurrency(summary.nightPay)})` : '';
+    return element('article', { className: `report-card ${variant}` }, [element('span', { text: title }), element('strong', { text: formatCurrency(summary.totalPay) }), element('small', { text: `${duration(summary.minutes65)} a 65% · ${duration(summary.minutes100)} a 100%${night}` })]);
   }
   createClosedPayrolls(closures) {
     if (!closures.length) return null;
@@ -51,7 +52,10 @@ export class TotalView {
     ]);
   }
   createBreakdown(label, summary, variant) {
-    return element('div', { className: `payment-breakdown ${variant}` }, [element('strong', { text: label }), element('span', { text: `65%: ${duration(summary.minutes65)} (${formatCurrency(summary.value65)})` }), element('span', { text: `100%: ${duration(summary.minutes100)} (${formatCurrency(summary.value100)})` }), element('b', { text: formatCurrency(summary.totalPay) })]);
+    const children = [element('strong', { text: label }), element('span', { text: `65%: ${duration(summary.minutes65)} (${formatCurrency(summary.value65)})` }), element('span', { text: `100%: ${duration(summary.minutes100)} (${formatCurrency(summary.value100)})` })];
+    if (summary.nightMinutes) children.push(element('span', { text: `Noturno 20%: ${duration(summary.nightMinutes)} (${formatCurrency(summary.nightPay)})` }));
+    children.push(element('b', { text: formatCurrency(summary.totalPay) }));
+    return element('div', { className: `payment-breakdown ${variant}` }, children);
   }
   createEntry(entry, handlers) {
     const isReceived = entry.paymentStatus === 'received';
