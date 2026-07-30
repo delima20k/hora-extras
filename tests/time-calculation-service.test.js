@@ -28,4 +28,16 @@ describe('TimeCalculationService', () => {
     expect(service.isNormalWorkday('2026-07-25', schedule)).toBe(false);
     expect(service.isNormalWorkday('2026-12-25', schedule)).toBe(false);
   });
+  it('usa 100% no único dia livre de uma escala de seis dias e mantém domingo trabalhado em 65%', () => {
+    const segundaASexta = { workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] };
+    const domingoASexta = { workDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'] };
+    const payroll = { salary: 2200, monthlyWorkload: 220 };
+    expect(service.getOvertimeMultiplier('2026-07-25', segundaASexta)).toBe(1.65);
+    expect(service.getOvertimeMultiplier('2026-07-25', domingoASexta)).toBe(2);
+    expect(service.getOvertimeMultiplier('2026-07-26', segundaASexta)).toBe(2);
+    expect(service.getOvertimeMultiplier('2026-07-26', domingoASexta)).toBe(1.65);
+    expect(service.getOvertimeMultiplier('2026-12-25', segundaASexta)).toBe(2);
+    expect(service.calculateOvertimePay(60, '2026-07-25', payroll, 0, segundaASexta)).toBe(16.5);
+    expect(service.calculateOvertimePay(60, '2026-07-25', payroll, 0, domingoASexta)).toBe(20);
+  });
 });

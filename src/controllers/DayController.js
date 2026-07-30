@@ -19,7 +19,7 @@ export class DayController {
       const [year, month] = this.date.split('-').map(Number);
       const [entries, monthEntries, allEntries] = await Promise.all([this.entryRepository.findByDate(this.employeeId, this.date), this.entryRepository.findByMonth(this.employeeId, month, year), this.entryRepository.findAll(this.employeeId)]);
       const currentPeriod = this.payrollPeriodService?.getCurrentPeriod(this.state.payrollSettings, this.now);
-      if (this.closureRepository && this.payrollClosureService) await this.payrollClosureService.sync({ employeeId: this.employeeId, entries: allEntries, payrollSettings: this.state.payrollSettings, closureRepository: this.closureRepository, now: this.now });
+      if (this.closureRepository && this.payrollClosureService) await this.payrollClosureService.sync({ employeeId: this.employeeId, entries: allEntries, payrollSettings: this.state.payrollSettings, workSchedule: this.state.workSchedule, closureRepository: this.closureRepository, now: this.now });
       if (requestId !== this.requestId) return;
       this.entries = entries; this.monthEntries = monthEntries; this.cycleEntries = currentPeriod ? allEntries.filter((entry) => this.payrollPeriodService.getPeriodForDate(entry.date, this.state.payrollSettings)?.endDate === currentPeriod.endDate) : monthEntries;
       this.isClosed = this.payrollPeriodService?.isClosed(this.date, this.state.payrollSettings, this.now) || false; this.closedPeriod = this.isClosed ? this.payrollPeriodService.getPeriodForDate(this.date, this.state.payrollSettings) : null; this.message = '';
@@ -29,12 +29,12 @@ export class DayController {
   render() {
     if (!this.view) return;
     const entries = this.entries.map((entry) => {
-      const multiplier = this.timeCalculationService.getOvertimeMultiplier(entry.date);
+      const multiplier = this.timeCalculationService.getOvertimeMultiplier(entry.date, this.state.workSchedule);
       const nightMinutes = this.timeCalculationService.calculateNightMinutes(entry.startTime, entry.endTime);
-      return { ...entry, displayDuration: this.timeCalculationService.formatDuration(entry.durationMinutes), endsNextDay: this.timeCalculationService.isNextDay(entry.startTime, entry.endTime), multiplier, nightMinutes, nightPay: this.timeCalculationService.calculateOvertimePay(0, entry.date, this.state.payrollSettings, nightMinutes), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings, nightMinutes) };
+      return { ...entry, displayDuration: this.timeCalculationService.formatDuration(entry.durationMinutes), endsNextDay: this.timeCalculationService.isNextDay(entry.startTime, entry.endTime), multiplier, nightMinutes, nightPay: this.timeCalculationService.calculateOvertimePay(0, entry.date, this.state.payrollSettings, nightMinutes, this.state.workSchedule), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings, nightMinutes, this.state.workSchedule) };
     });
     const totals = this.calculateTotals(entries);
-    const monthlyEntries = this.cycleEntries.map((entry) => { const nightMinutes = this.timeCalculationService.calculateNightMinutes(entry.startTime, entry.endTime); return { ...entry, multiplier: this.timeCalculationService.getOvertimeMultiplier(entry.date), nightMinutes, nightPay: this.timeCalculationService.calculateOvertimePay(0, entry.date, this.state.payrollSettings, nightMinutes), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings, nightMinutes) }; });
+    const monthlyEntries = this.cycleEntries.map((entry) => { const nightMinutes = this.timeCalculationService.calculateNightMinutes(entry.startTime, entry.endTime); return { ...entry, multiplier: this.timeCalculationService.getOvertimeMultiplier(entry.date, this.state.workSchedule), nightMinutes, nightPay: this.timeCalculationService.calculateOvertimePay(0, entry.date, this.state.payrollSettings, nightMinutes, this.state.workSchedule), pay: this.timeCalculationService.calculateOvertimePay(entry.durationMinutes, entry.date, this.state.payrollSettings, nightMinutes, this.state.workSchedule) }; });
     const monthlyTotals = this.calculateTotals(monthlyEntries);
     const salary = Number(this.state.payrollSettings?.salary) || 0;
     const monthlyWorkload = Number(this.state.payrollSettings?.monthlyWorkload) || 0;
@@ -66,8 +66,8 @@ export class DayController {
       this.ensureOpenPeriod();
       const duration = this.timeCalculationService.calculateDuration(startTime, endTime);
       if (this.timeCalculationService.isNormalWorkday(this.date, this.state.workSchedule) && this.timeCalculationService.overlapsNormalSchedule(startTime, endTime, this.state.workSchedule)) throw new Error('O horário informado invade a jornada normal. Registre apenas o período antes ou depois dela.');
-      const multiplier = this.timeCalculationService.getOvertimeMultiplier(this.date);
-      const nightMinutes = this.timeCalculationService.calculateNightMinutes(startTime, endTime); const pay = this.timeCalculationService.calculateOvertimePay(duration, this.date, this.state.payrollSettings, nightMinutes);
+      const multiplier = this.timeCalculationService.getOvertimeMultiplier(this.date, this.state.workSchedule);
+      const nightMinutes = this.timeCalculationService.calculateNightMinutes(startTime, endTime); const pay = this.timeCalculationService.calculateOvertimePay(duration, this.date, this.state.payrollSettings, nightMinutes, this.state.workSchedule);
       const nightText = nightMinutes ? ` · noturno 20%: ${this.timeCalculationService.formatDuration(nightMinutes)}` : '';
       this.view?.updateDurationPreview({ text: `Duração: ${this.timeCalculationService.formatDuration(duration)} · adicional de ${Math.round((multiplier - 1) * 100)}%${nightText} · ${currency.format(pay)}.`, isError: false });
     } catch (error) { this.view?.updateDurationPreview({ text: error.message, isError: true, warning: '' }); }

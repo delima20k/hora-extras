@@ -120,7 +120,7 @@ export class App {
 
       this.pwa = new PwaService(this.storage);
       void this.pwa.register();
-      this.pwa.listen(() => this.renderInstallCard());
+      this.pwa.listen((options) => this.renderInstallCard(options));
       const initialRoute = this.navigation.routeFromHash();
       if (!window.location.hash || initialRoute !== window.location.hash.slice(1)) history.replaceState(null, '', '#today');
       this.navigation.render(initialRoute);
@@ -170,11 +170,16 @@ export class App {
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   }
 
-  renderInstallCard() {
+  renderInstallCard({ platform = 'browser' } = {}) {
     const card = this.layout.refs.install;
-    const install = button('Instalar', { className: 'primary-button', onClick: async () => { const accepted = await this.pwa.install(); if (accepted) card.hidden = true; } });
     const later = button('Agora não', { className: 'secondary-button', onClick: () => { this.pwa.dismiss(); card.hidden = true; } });
-    card.replaceChildren(element('strong', { text: 'Instalar aplicativo' }), element('p', { text: 'Adicione o Controle de Horas Extras à tela inicial do celular.' }), element('div', { className: 'button-row' }, [install, later]));
+    if (platform === 'ios') {
+      const steps = element('ol', { className: 'ios-install-steps' }, [element('li', { text: 'Abra este site no Safari.' }), element('li', { text: 'Toque em Compartilhar.' }), element('li', { text: 'Escolha Adicionar à Tela de Início.' })]);
+      card.replaceChildren(element('strong', { text: 'Instalar no iPhone ou iPad' }), element('p', { text: 'O Safari instala apps pela folha de compartilhamento.' }), steps, later);
+    } else {
+      const install = button('Instalar', { className: 'primary-button', onClick: async () => { const accepted = await this.pwa.install(); if (accepted) card.hidden = true; } });
+      card.replaceChildren(element('strong', { text: 'Instalar aplicativo' }), element('p', { text: 'Adicione o Controle de Horas Extras à tela inicial do celular.' }), element('div', { className: 'button-row' }, [install, later]));
+    }
     card.hidden = false;
   }
 

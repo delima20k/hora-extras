@@ -42,9 +42,14 @@ export class TimeCalculationService {
     const diff = Math.round((value - easter) / 86400000);
     return diff === -2 || diff === 60;
   }
-  getOvertimeMultiplier(date) {
+  getOvertimeMultiplier(date, workSchedule = null) {
     const { value } = this.getDateParts(date);
-    return value.getDay() === 0 || this.isHoliday(date) ? 2 : 1.65;
+    if (this.isHoliday(date)) return 2;
+    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const workDays = workSchedule?.workDays;
+    if (Array.isArray(workDays) && workDays.includes(weekdays[value.getDay()])) return 1.65;
+    if (Array.isArray(workDays) && workDays.length === 6) return 2;
+    return value.getDay() === 0 ? 2 : 1.65;
   }
   calculateNightMinutes(startTime, endTime) {
     if (!this.isValidTime(startTime) || !this.isValidTime(endTime)) return 0;
@@ -52,11 +57,11 @@ export class TimeCalculationService {
     const nightStart = 22 * 60 + 30; const nightEnd = MINUTES_PER_DAY + 5 * 60;
     return Math.max(0, Math.min(end, nightEnd) - Math.max(start, nightStart));
   }
-  calculateOvertimePay(durationMinutes, date, payrollSettings, nightMinutes = 0) {
+  calculateOvertimePay(durationMinutes, date, payrollSettings, nightMinutes = 0, workSchedule = null) {
     const salary = Number(payrollSettings?.salary); const monthlyWorkload = Number(payrollSettings?.monthlyWorkload);
     if (!Number.isFinite(salary) || salary <= 0 || !Number.isFinite(monthlyWorkload) || monthlyWorkload <= 0) return 0;
     const hourlyRate = salary / monthlyWorkload;
-    return (durationMinutes / 60) * hourlyRate * this.getOvertimeMultiplier(date) + (Math.max(0, Number(nightMinutes) || 0) / 60) * hourlyRate * 0.2;
+    return (durationMinutes / 60) * hourlyRate * this.getOvertimeMultiplier(date, workSchedule) + (Math.max(0, Number(nightMinutes) || 0) / 60) * hourlyRate * 0.2;
   }
   isNormalWorkday(date, schedule) {
     if (!schedule?.workDays?.length || this.isHoliday(date)) return false;

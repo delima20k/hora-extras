@@ -21,7 +21,11 @@ describe('auditoria de regressão', () => {
 
   it('não renderiza uma tela do dia depois de ela ter sido fechada', async () => {
     let resolveEntries;
-    const repository = { findByDate: vi.fn(() => new Promise((resolve) => { resolveEntries = resolve; })) };
+    const repository = {
+      findByDate: vi.fn(() => new Promise((resolve) => { resolveEntries = resolve; })),
+      findByMonth: vi.fn(async () => []),
+      findAll: vi.fn(async () => [])
+    };
     const view = { renderLoading: vi.fn(), render: vi.fn(), updateDurationPreview: vi.fn() };
     const controller = new DayController({ state: { selectedDate: '2026-07-15', employee: { id: 'audit-user' } }, dateService: {}, entryRepository: repository });
     const opening = controller.open(view, vi.fn());

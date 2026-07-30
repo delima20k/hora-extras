@@ -4,5 +4,6 @@
 .header-title { overflow: hidden; margin: 0; color: var(--black); font-size: 1rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; }.header-avatar { width: 36px; height: 36px; border: 2px solid var(--orange); border-radius: 50%; object-fit: cover; }
 #app { min-height: 100vh; padding-top: var(--header-height, calc(64px + env(safe-area-inset-top))); }
 .install-card { position: fixed; z-index: 70; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); left: 16px; max-width: 520px; padding: 18px; }.install-card strong { display: block; }.install-card p { margin: 6px 0 14px; color: var(--gray); line-height: 1.4; }.button-row { display: flex; gap: 10px; }
+.ios-install-steps { display: grid; gap: 7px; margin: 0 0 16px; padding-left: 22px; color: var(--black); line-height: 1.4; }
 .primary-button, .secondary-button { min-height: 46px; border-radius: 12px; padding: 0 18px; font-weight: 750; }.primary-button { border: 0; color: #fff; background: var(--orange); }.primary-button:hover { background: var(--orange-dark); }.primary-button:disabled { cursor: wait; opacity: .65; }.secondary-button { border: 1px solid #d9b78e; color: var(--black); background: var(--cream); }.secondary-button:hover { background: #ffefd9; }
 @media (min-width: 560px) { .install-card { left: 50%; transform: translateX(-50%); } }
